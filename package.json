@@ -1,0 +1,20 @@
+{
+  "name": "datafeed-js",
+  "version": "1.0.0",
+  "description": "RSA Archer javascript transporter library",
+  "main": "datafeed.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jan Arcalas",
+  "license": "MIT",
+  "dependencies": {
+    "request": "^2.88.0",
+    "xml2js": "^0.4.19",
+    "xmldom": "^0.1.27",
+    "xpath": "0.0.27"
+  },
+  "devDependencies": {
+    "standard": "^12.0.1"
+  }
+}
