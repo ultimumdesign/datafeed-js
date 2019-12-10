@@ -16,14 +16,9 @@ to various data sources using https and JWT auth. It can also do limited process
 
       ```javascript
         {
-            "certURI": "URI to client machine certificate",
-            "keyURI": "URI to client machine key",
-            "caURI": "URI to CA bundle certificate",
-            "passphrase": "Password of encrpyted machine key",
-            "dataURI": "URI for primary data endpoint",
-            "scriptType": "Integer to indicate what type of scenario the main script should execute (refer to explanations below)",
-            "authURI": "Optional URI to authorization endpoint to acquire jsonwebtoken (JWT)",
-            "jsonKey": "Optional string to indicate which key to loop through for JSON to XML conversion"
+            "baseUrl": "API base URL",
+            "login": "",
+            "password": ""
         }
       ```
   3.  Script scenarios to set for scriptType (default: 0) ** Note: Archer accepts CSV or XML

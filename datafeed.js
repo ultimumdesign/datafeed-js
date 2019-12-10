@@ -5,10 +5,12 @@ const httpRequest = require('request')
 const parser = require('xml2js')
 
 // REQUIRED PARAMETERS
-// An object with keys that describe the required process context parameters for options/execution
-// this is passed into the execution scope from the Archer process
+// An object in which the keys describe the required process context parameters for options/execution
+// this is passed into the execution scope from the Archer datafeed config
 const requiredParams = {
-
+  login: 'username of account',
+  password: 'password of login',
+  baseUrl: 'base url of api'
 }
 
 // CUSTOM PARAMETERS
@@ -26,33 +28,63 @@ const params = context.CustomParameters
 // --    tokens.tokenName    Example: tokens.PreviousRunContext or tokens.LastRunTime
 // var tokens = context.Tokens;
 
-function validateEnv () {
-
+/**
+ * Final function for Archer transfer
+ * @param {Object} [error=null] Error object if applicable
+ * @param {Buffer} data Data buffer to send to Archer
+ */
+function transfer (error = null, data) {
+  // callback() is a parent process global function
+  if (error) {
+    const logger = Logger()
+    logger.error(error)
+    // eslint-disable-next-line no-undef
+    callback(error)
+  }
+  // eslint-disable-next-line no-undef
+  callback(null, {
+    // Return the data to RSA Archer
+    output: data
+    // PreviousRunContext token value; 256 char limit. If omitted, the token is cleared.
+    //  previousRunContext: 'myContextVariable'
+  })
 }
+
 /**
  * Retreives a specific options object with optional overwrite
  * @param {String} key The key representing the desired options to retrieve
- * @param {Object} [override={}] An optional object to override the default option selected
+ * @param {Object} [override={}] An optional object to unpack over the default option selected
  */
 function initOptions (key, override = {}) {
   const defaultOptions = {
-    getS3: {
-      method: 'GET',
-      rejectUnauthorized: false
-    },
-    getHttps: {
-      method: 'GET',
-      secureProtocol: 'TLSv1_2_method',
-      passphrase: params.passphrase
-    },
+    // default xml builder opts
     buildXml: {
       headless: true,
       rootName: 'RECORD',
       renderOpts: {
         pretty: true,
-        indent: '    ',
+        indent: '  ',
         newline: '\n'
       }
+    },
+    /** Custom Options */
+    // Authentication endpoint
+    auth: {
+      method: 'POST',
+      baseUrl: params.baseUrl,
+      url: '',
+      json: true,
+      body: {},
+      rejectUnauthorized: false
+    },
+    // data endpoint
+    users: {
+      method: 'POST',
+      baseUrl: params.baseUrl,
+      url: '',
+      json: true,
+      body: {},
+      rejectUnauthorized: false
     }
   }
   const selectedOption = Object.assign({}, defaultOptions[key])
@@ -63,7 +95,6 @@ function initOptions (key, override = {}) {
  * Converts json data to an xml output
  * @param {String} jsonData JSON array of records to convert
  */
-// eslint-disable-next-line no-unused-vars
 function jsonArrayToXmlBuffer (jsonData, rootElement = null) {
   const responseBuilder = new parser.Builder(initOptions('buildXml'))
   const dataObject = JSON.parse(jsonData)
@@ -72,14 +103,14 @@ function jsonArrayToXmlBuffer (jsonData, rootElement = null) {
     : dataObject
   const xmlBufferArray = jsData.reduce((preVal, curVal, i, src) => {
     preVal.push(Buffer.from(responseBuilder.buildObject(curVal), 'utf8'))
-    if (i + 1 === src.length) preVal.push(Buffer.from('</DATA>', 'utf8'))
+    if (i + 1 === src.length) preVal.push(Buffer.from('</DATA>\n', 'utf8'))
     return preVal
   }, [Buffer.from('<DATA>', 'utf8')])
   return Buffer.concat(xmlBufferArray)
 }
 
 /**
- *
+ * Promise wrapper for request library
  * @param {Object} options
  * @param {Boolean} [chunked=false]
  */
@@ -93,8 +124,8 @@ function requestEndpoint (options, chunked = false) {
           data.push(chunk)
         })
         response.on('end', () => {
-          const output = `${data.join('')}`
-          resolve(output)
+          const body = data.join('')
+          resolve({ body, response })
         })
       })
       req.on('error', error => {
@@ -103,178 +134,92 @@ function requestEndpoint (options, chunked = false) {
     } else {
       httpRequest(options, (error, response, body) => {
         if (error) reject(error)
-        if (response) resolve(body)
+        if (response) resolve({ body, response })
       })
     }
   })
 }
 
 /**
- * Retrieves all the required files for TLS
- * @returns {Object}
+ * Validates Archer params against requiredParams object
  */
-function getTlsContext () {
-  // get all certs as promises
-  const certFile = requestEndpoint(initOptions('getS3', {
-    url: params.certURI }), false)
-  const keyFile = requestEndpoint(initOptions('getS3', {
-    url: params.keyURI }), false)
-  const caFile = requestEndpoint(initOptions('getS3', {
-    url: params.caURI }), false)
-  // once all certs are returned
-  return Promise.all([certFile, keyFile, caFile]).then(values => {
-    return {
-      cert: values[0],
-      key: values[1],
-      ca: values[2]
+function validateEnv () {
+  Object.keys(requiredParams).map(val => {
+    if (!params[val]) {
+      throw new Error(`Required param validation failed. 
+    Please check the file against the datafeed config`)
     }
   })
 }
 
 /**
- * Final processing function
- * @param {*} data Data to finalize and send to Archer
+ * Logger factory
  */
-function execute (error = null, data) {
-  // callback() is a parent process global function
-  // eslint-disable-next-line no-undef
-  if (error) callback(error)
-  // eslint-disable-next-line no-undef
-  callback(null, {
-    // Return the data to RSA Archer
-    output: Buffer.from(data),
-    // PreviousRunContext token value; 256 char limit. If omitted, the token is cleared.
-    previousRunContext: 'myContextVariable'
-  })
-}
-
-/**
- * Primary execution function
- */
-async function runFeed (debug = false) {
-  try {
-    const tlsObject = await getTlsContext()
-    let token = ''
-    if (params.authURI) {
-      const authReply = await requestEndpoint(
-        initOptions(
-          'getHttps',
-          Object.assign({ url: params.authURI }, tlsObject)
-        )
-      )
-      const bodyObject = JSON.parse(authReply)
-      token = bodyObject.token
+function Logger () {
+  return {
+    error (error) {
+      if (params.stackTrace) console.log(error)
+      else console.log(`${new Date().toISOString()} | ERROR | ${error.message}`)
+    },
+    info (message) {
+      console.log(`${new Date().toISOString()} | INFO | ${message}`)
     }
-    // variable processing depends on params.scriptType
-    const scriptType = params.scriptType
-      ? Number.parseInt(params.scriptType)
-      : 0
-    switch (scriptType) {
-      // no auth, non-chunked reply
-      case 0:
-        const data = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({ url: params.dataURI }, tlsObject)
-          )
-        )
-        execute(data)
-        break
-      // no auth, chunked reply
-      case 1:
-        const data1 = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({ url: params.dataURI }, tlsObject)
-          ),
-          true
-        )
-        execute(data1)
-        break
-      // JWT auth, non-chunked reply
-      case 2:
-        const data2 = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({
-              url: params.dataURI,
-              headers: { authorization: `bearer ${token}` }
-            }, tlsObject)
-          )
-        )
-        execute(data2)
-        break
-      // JWT auth, chunked reply
-      case 3:
-        const data3 = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({
-              url: params.dataURI,
-              headers: { authorization: `bearer ${token}` }
-            }, tlsObject)
-          ),
-          true
-        )
-        execute(data3)
-        break
-      // JSON input with XML conversion, no auth, non-chunked reply
-      case 4:
-        const data4 = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({ url: params.dataURI }, tlsObject)
-          )
-        )
-        const data4Xml = jsonArrayToXml(data4)
-        execute(data4Xml)
-        break
-      // JSON input with XML conversion, no auth, chunked reply
-      case 5:
-        const data5 = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({ url: params.dataURI }, tlsObject)
-          ),
-          true
-        )
-        const data5Xml = jsonArrayToXml(data5)
-        execute(data5Xml)
-        break
-      // JSON input with XML conversion, JWT auth, non-chunked reply
-      case 6:
-        const data6 = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({
-              url: params.dataURI,
-              headers: { authorization: `bearer ${token}` }
-            }, tlsObject)
-          )
-        )
-        const data6Xml = jsonArrayToXml(data6)
-        execute(data6Xml)
-        break
-      // JSON input with XML conversion, JWT auth, chunked reply
-      case 7:
-        const data7 = await requestEndpoint(
-          initOptions(
-            'getHttps',
-            Object.assign({
-              url: params.dataURI,
-              headers: { authorization: `bearer ${token}` }
-            }, tlsObject)
-          ),
-          true
-        )
-        const data7Xml = jsonArrayToXml(data7)
-        execute(data7Xml)
-    }
-  } catch (e) {
-    throw e
   }
 }
 
-runFeed((params.debug || false))
+/**
+ * Runner factory
+ */
+function Runner () {
+  return {
+    // an array of buffer objects to send
+    bufferArray: [],
+    // post response filters to run against returned data
+    afterResponse: [],
+    jar: httpRequest.jar(),
+    pagination: {
+      total: 0,
+      start: 0,
+      stop: 50,
+      interval: 50
+    },
+    token: null,
+    concurrency: 0,
+    validateEnv,
+    /**
+     * This sample api controller uses cookies to make subsequent requests
+     */
+    async controller () {
+      try {
+        const cookieLen = this.jar.getCookies(params.baseUrl.split('://')[1]).length
+        if (!cookieLen) {
+          const authOpts = initOptions('auth', { jar: this.jar })
+          const { response } = await requestEndpoint(authOpts)
+          if (response.statusCode === 200) this.token = response.headers['Token']
+        }
+      } catch (err) {
+        throw err
+      }
+    },
+    getFinalBuffer () {
+      return Buffer.concat(this.bufferArray)
+    }
+  }
+}
 
-module.exports = runFeed
+/**
+ * Primary datafeed-js executor function
+ */
+function execute () {
+  try {
+    // todo
+    const instance = Runner()
+  } catch (err) {
+    const logger = Logger()
+    logger.error(err)
+    // eslint-disable-next-line no-undef
+    callback(err)
+  }
+}
+
+module.exports = execute
