@@ -10,7 +10,8 @@ const parser = require('xml2js')
 const requiredParams = {
   login: 'username of account',
   password: 'password of login',
-  baseUrl: 'base url of api'
+  baseUrl: 'base url of api',
+  source: 'which options object to make primary API requests to'
 }
 
 // CUSTOM PARAMETERS
@@ -36,10 +37,19 @@ const params = context.CustomParameters
 function transfer (error = null, data) {
   // callback() is a parent process global function
   if (error) {
-    const logger = Logger()
-    logger.error(error)
+    Logger().error(error)
     // eslint-disable-next-line no-undef
     callback(error)
+  }
+  if (params.print) {
+    try {
+      const fs = require('fs')
+      fs.writeFileSync(`DATAFEEDJS_${params.source.toUpperCase()}.xml`)
+    } catch (err) {
+      Logger().error(err)
+      // eslint-disable-next-line no-undef
+      callback(error)
+    }
   }
   // eslint-disable-next-line no-undef
   callback(null, {
@@ -78,7 +88,7 @@ function initOptions (key, override = {}) {
       rejectUnauthorized: false
     },
     // data endpoint
-    users: {
+    ipsummary: {
       method: 'POST',
       baseUrl: params.baseUrl,
       url: '',
@@ -103,9 +113,8 @@ function jsonArrayToXmlBuffer (jsonData, rootElement = null) {
     : dataObject
   const xmlBufferArray = jsData.reduce((preVal, curVal, i, src) => {
     preVal.push(Buffer.from(responseBuilder.buildObject(curVal), 'utf8'))
-    if (i + 1 === src.length) preVal.push(Buffer.from('</DATA>\n', 'utf8'))
     return preVal
-  }, [Buffer.from('<DATA>', 'utf8')])
+  }, [])
   return Buffer.concat(xmlBufferArray)
 }
 
@@ -141,6 +150,24 @@ function requestEndpoint (options, chunked = false) {
 }
 
 /**
+ * Retry wrapper for requestEndpoint
+ * @param {Object} opts Request options object
+ * @param {Integer} maxRetry maxRetry count
+ */
+async function retryEndpoint (opts, maxRetry = 3) {
+  const { body, response } = await requestEndpoint(opts)
+  if (response.statusCode === 200) return { body, response }
+  else if (maxRetry > 0) {
+    // Try again if we haven't reached maxRetries yet
+    setTimeout(async () => {
+      return retryEndpoint(opts, maxRetry - 1)
+    }, 1000)
+  } else {
+    throw new Error(`Reached max retries for retryEndpoint()`)
+  }
+}
+
+/**
  * Validates Archer params against requiredParams object
  */
 function validateEnv () {
@@ -172,37 +199,85 @@ function Logger () {
  */
 function Runner () {
   return {
-    // an array of buffer objects to send
     bufferArray: [],
-    // post response filters to run against returned data
-    afterResponse: [],
+    requestList: [],
     jar: httpRequest.jar(),
+    options: {},
     pagination: {
       total: 0,
-      start: 0,
-      stop: 50,
       interval: 50
     },
     token: null,
-    concurrency: 0,
     validateEnv,
     /**
-     * This sample api controller uses cookies to make subsequent requests
+     * This sample api controller requires auth to make subsequent requests
      */
     async controller () {
       try {
+        this.validateEnv()
+        await this.auth()
+        await this.prepare()
+        await this.build()
+        return this.getFinalBuffer()
+      } catch (err) {
+        throw err
+      }
+    },
+    async auth () {
+      try {
         const cookieLen = this.jar.getCookies(params.baseUrl.split('://')[1]).length
-        if (!cookieLen) {
-          const authOpts = initOptions('auth', { jar: this.jar })
-          const { response } = await requestEndpoint(authOpts)
-          if (response.statusCode === 200) this.token = response.headers['Token']
+        if (!cookieLen || !this.token) {
+          this.options = initOptions('auth', { jar: this.jar })
+          const { response } = await retryEndpoint(this.options)
+          this.token = response.headers['Token']
+          this.options = {}
         }
       } catch (err) {
         throw err
       }
     },
+    async prepare () {
+      try {
+        this.options = initOptions('ipsummary', {
+          jar: this.jar,
+          headers: {
+            token: this.token
+          }
+        })
+        const { body } = await retryEndpoint(this.options)
+        this.pagination.total = body.response.totalRecords
+        // ensure proper root element is set for jsonArrayToXmlBuffer
+        this.bufferArray.push(jsonArrayToXmlBuffer(body))
+      } catch (err) {
+        throw err
+      }
+    },
+    async build () {
+      try {
+        this.generateRequestList()
+        await Promise.all(this.requestList.map(async (opts) => {
+          const { body } = await retryEndpoint(opts)
+          this.bufferArray.push(jsonArrayToXmlBuffer(body))
+        }))
+      } catch (err) {
+        throw err
+      }
+    },
+    generateRequestList () {
+      while (this.options.body.end < this.pagination.total) {
+        this.incrementQuery()
+        this.requestQueue.push(this.options)
+      }
+    },
+    incrementQuery () {
+      this.options.body.start += this.pagination.interval
+      this.options.body.end += this.pagination.interval
+    },
     getFinalBuffer () {
-      return Buffer.concat(this.bufferArray)
+      const start = Buffer.from('<DATA>\n', 'utf8')
+      const data = Buffer.concat(this.bufferArray)
+      const end = Buffer.from('</DATA>', 'utf-8')
+      return Buffer.concat([start, data, end])
     }
   }
 }
@@ -210,16 +285,17 @@ function Runner () {
 /**
  * Primary datafeed-js executor function
  */
-function execute () {
+async function execute () {
   try {
-    // todo
-    const instance = Runner()
+    const data = await Runner().controller()
+    transfer(null, data)
   } catch (err) {
-    const logger = Logger()
-    logger.error(err)
+    Logger().error(err)
     // eslint-disable-next-line no-undef
-    callback(err)
+    transfer(err)
   }
 }
+
+execute()
 
 module.exports = execute

@@ -21,24 +21,6 @@ to various data sources using https and JWT auth. It can also do limited process
             "password": ""
         }
       ```
-  3.  Script scenarios to set for scriptType (default: 0) ** Note: Archer accepts CSV or XML
-
-      case 0: no auth, non-chunked reply
-
-      case 1: no auth, chunked reply
-
-      case 2: JWT auth, non-chunked reply
-
-      case 3: JWT auth, chunked reply
-
-      case 4: JSON input with XML conversion, no auth, non-chunked reply
-
-      case 5: JSON input with XML conversion, no auth, chunked reply
-
-      case 6: JSON input with XML conversion, JWT auth, non-chunked reply
-
-      case 7: JSON input with XML conversion, JWT auth, chunked reply
-
 
 TODO:
 
