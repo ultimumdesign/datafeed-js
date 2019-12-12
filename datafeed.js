@@ -22,6 +22,13 @@ const requiredParams = {
 // eslint-disable-next-line no-undef
 const params = context.CustomParameters
 
+// OUTPUT WRITER
+// Archer added a convenience function attached to the context global that enables looping
+// writes to the file system this next statement creates an instance of the write and contains
+// a method .writeItem(item)
+// eslint-disable-next-line no-undef
+const outputWriter = context.OutputWriter.create('XML', { RootNode: 'ROOT' })
+
 // DATA FEED TOKENS
 // --This object contains the data feed tokens set by the system. Examples: LastRunTime, LastFileProcessed, PreviousRunContext, etc..
 // --NOTE: The tokens are READ ONLY by this script, save for the "PreviousRunContext" token, which is discussed later.
@@ -34,30 +41,20 @@ const params = context.CustomParameters
  * @param {Object} [error=null] Error object if applicable
  * @param {Buffer} data Data buffer to send to Archer
  */
-function transfer (error = null, data) {
+function transfer (error = null, data = null) {
   // callback() is a parent process global function
   if (error) {
     Logger().error(error)
     // eslint-disable-next-line no-undef
     callback(error)
   }
-  if (params.print) {
-    try {
-      const fs = require('fs')
-      fs.writeFileSync(`DATAFEEDJS_${params.source.toUpperCase()}.xml`)
-    } catch (err) {
-      Logger().error(err)
-      // eslint-disable-next-line no-undef
-      callback(error)
-    }
+  if (data) {
+    const fs = require('fs')
+    // no call back initiated
+    return fs.writeFileSync(`DATAFEED_${params.source}.xml`, data)
   }
   // eslint-disable-next-line no-undef
-  callback(null, {
-    // Return the data to RSA Archer
-    output: data
-    // PreviousRunContext token value; 256 char limit. If omitted, the token is cleared.
-    //  previousRunContext: 'myContextVariable'
-  })
+  callback(null)
 }
 
 /**
@@ -107,7 +104,8 @@ function initOptions (key, override = {}) {
  */
 function jsonArrayToXmlBuffer (jsonData, rootElement = null) {
   const responseBuilder = new parser.Builder(initOptions('buildXml'))
-  const dataObject = JSON.parse(jsonData)
+  const dataObject = typeof jsonData === 'string'
+    ? JSON.parse(jsonData) : jsonData
   const jsData = rootElement
     ? dataObject[rootElement]
     : dataObject
@@ -208,6 +206,7 @@ function Runner () {
       interval: 50
     },
     token: null,
+    outputWriter,
     validateEnv,
     /**
      * This sample api controller requires auth to make subsequent requests
@@ -218,7 +217,7 @@ function Runner () {
         await this.auth()
         await this.prepare()
         await this.build()
-        return this.getFinalBuffer()
+        return this.publishFinal()
       } catch (err) {
         throw err
       }
@@ -246,8 +245,7 @@ function Runner () {
         })
         const { body } = await retryEndpoint(this.options)
         this.pagination.total = body.response.totalRecords
-        // ensure proper root element is set for jsonArrayToXmlBuffer
-        this.bufferArray.push(jsonArrayToXmlBuffer(body))
+        this.write(body)
       } catch (err) {
         throw err
       }
@@ -257,27 +255,34 @@ function Runner () {
         this.generateRequestList()
         await Promise.all(this.requestList.map(async (opts) => {
           const { body } = await retryEndpoint(opts)
-          this.bufferArray.push(jsonArrayToXmlBuffer(body))
+          this.write(body)
         }))
       } catch (err) {
         throw err
       }
     },
+    publishFinal () {
+      if (this.bufferArray.length) {
+        const start = Buffer.from('<DATA>\n', 'utf8')
+        const data = Buffer.concat(this.bufferArray)
+        const end = Buffer.from('</DATA>', 'utf-8')
+        return Buffer.concat([start, data, end])
+      }
+      return false
+    },
+    write (list) {
+      if (params.print) this.bufferArray.push(jsonArrayToXmlBuffer(list))
+      else list.map(item => this.outputWriter.createItem(item))
+    },
     generateRequestList () {
       while (this.options.body.end < this.pagination.total) {
         this.incrementQuery()
-        this.requestQueue.push(this.options)
+        this.requestList.push(this.options)
       }
     },
     incrementQuery () {
       this.options.body.start += this.pagination.interval
       this.options.body.end += this.pagination.interval
-    },
-    getFinalBuffer () {
-      const start = Buffer.from('<DATA>\n', 'utf8')
-      const data = Buffer.concat(this.bufferArray)
-      const end = Buffer.from('</DATA>', 'utf-8')
-      return Buffer.concat([start, data, end])
     }
   }
 }
@@ -288,7 +293,8 @@ function Runner () {
 async function execute () {
   try {
     const data = await Runner().controller()
-    transfer(null, data)
+    if (data) transfer(null, data)
+    else transfer(null)
   } catch (err) {
     Logger().error(err)
     // eslint-disable-next-line no-undef

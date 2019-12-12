@@ -2,7 +2,7 @@
 Modular data feed javascript transporter
 
 DATAFEED-JS is a JavaScript based module that serves [Archer](https://archer.example.com) as a data feed. It connects
-to various data sources using https and JWT auth. It can also do limited processing (ie converting between data structures).
+to various data sources using http requests.
 
 ### Considerations for Usage
 
