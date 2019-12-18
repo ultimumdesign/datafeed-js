@@ -20,7 +20,9 @@ const requiredParams = {
   login: 'username of account',
   password: 'password of login',
   baseUrl: 'base url of api',
-  source: 'which options object to make primary API requests to'
+  source: 'which options object to make primary API requests to',
+  rangeStart: 'Starting range of SC date filter',
+  rangeEnd: 'End range of SC date filter'
 }
 
 // CUSTOM PARAMETERS
@@ -37,7 +39,7 @@ const params = context.CustomParameters
 // writes to the file system this next statement creates an instance of the write and contains
 // a method .writeItem(item)
 // eslint-disable-next-line no-undef
-const outputWriter = context.OutputWriter.create('XML', { RootNode: 'ROOT' })
+// const outputWriter = context.OutputWriter.create('XML', { RootNode: 'RECORD' })
 // const outputWriter = () => false
 
 // DATA FEED TOKENS
@@ -66,26 +68,167 @@ function initOptions (key, override = {}) {
     },
     /** Custom Options */
     // Authentication endpoint
+    home: {
+      method: 'GET',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}`,
+      rejectUnauthorized: false
+    },
     auth: {
       method: 'POST',
-      baseUrl: params.baseUrl,
-      url: '/api',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}/rest/token`,
       json: true,
-      body: {},
+      body: {
+        username: params.login,
+        password: params.password,
+        releaseSession: true
+      },
       rejectUnauthorized: false
     },
     // data endpoint
     ipsummary: {
-      method: 'GET',
-      baseUrl: params.baseUrl,
-      url: '/api',
-      // json: true,
-      // body: {},
+      method: 'POST',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}/rest/analysis`,
+      json: true,
+      body: {
+        'query': {
+          'name': '',
+          'description': '',
+          'context': '',
+          'status': -1,
+          'createdTime': 0,
+          'modifiedTime': 0,
+          'groups': [],
+          'type': 'vuln',
+          'tool': 'sumip',
+          'sourceType': 'cumulative',
+          'startOffset': 0,
+          'endOffset': 100,
+          'filters': [
+            {
+              'id': 'lastSeen',
+              'filterName': 'lastSeen',
+              'operator': '=',
+              'type': 'vuln',
+              'isPredefined': true,
+              'value': `${params.rangeStart}:${params.rangeEnd}`
+            }
+          ],
+          'sortColumn': 'score',
+          'sortDirection': 'desc',
+          'vulnTool': 'sumip'
+        },
+        'sourceType': 'cumulative',
+        'sortField': 'score',
+        'sortDir': 'desc',
+        'columns': [],
+        'type': 'vuln'
+      },
+      rejectUnauthorized: false
+    },
+    // data endpoint
+    active: {
+      method: 'POST',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}/rest/analysis`,
+      json: true,
+      body: {
+        'query': {
+          'name': '',
+          'description': '',
+          'context': '',
+          'status': -1,
+          'createdTime': 0,
+          'modifiedTime': 0,
+          'groups': [],
+          'type': 'vuln',
+          'tool': 'vulndetails',
+          'sourceType': 'cumulative',
+          'startOffset': 0,
+          'endOffset': 100,
+          'filters': [
+            {
+              'id': 'pluginType',
+              'filterName': 'pluginType',
+              'operator': '=',
+              'type': 'vuln',
+              'isPredefined': true,
+              'value': 'active'
+            },
+            {
+              'id': 'lastSeen',
+              'filterName': 'lastSeen',
+              'operator': '=',
+              'type': 'vuln',
+              'isPredefined': true,
+              'value': `${params.rangeStart}:${params.rangeEnd}`
+            }
+          ],
+          'vulnTool': 'vulndetails'
+        },
+        'sourceType': 'cumulative',
+        'columns': [],
+        'type': 'vuln'
+      },
+      rejectUnauthorized: false
+    },
+    // data endpoint
+    compliance: {
+      method: 'POST',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}/rest/analysis`,
+      json: true,
+      body: {
+        'query': {
+          'name': '',
+          'description': '',
+          'context': '',
+          'status': -1,
+          'createdTime': 0,
+          'modifiedTime': 0,
+          'groups': [],
+          'type': 'vuln',
+          'tool': 'vulndetails',
+          'sourceType': 'cumulative',
+          'startOffset': 0,
+          'endOffset': 100,
+          'filters': [
+            {
+              'id': 'pluginType',
+              'filterName': 'pluginType',
+              'operator': '=',
+              'type': 'vuln',
+              'isPredefined': true,
+              'value': 'compliance'
+            },
+            {
+              'id': 'lastSeen',
+              'filterName': 'lastSeen',
+              'operator': '=',
+              'type': 'vuln',
+              'isPredefined': true,
+              'value': `${params.rangeStart}:${params.rangeEnd}`
+            }
+          ],
+          'vulnTool': 'vulndetails'
+        },
+        'sourceType': 'cumulative',
+        'columns': [],
+        'type': 'vuln'
+      },
       rejectUnauthorized: false
     }
+
   }
   const selectedOption = Object.assign({}, defaultOptions[key])
   return Object.assign(selectedOption, override)
+}
+
+/** Sleep function */
+function sleepme (milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
 /**
@@ -125,6 +268,7 @@ function requestEndpoint (options, chunked = false) {
  * @param {Integer} maxRetry maxRetry count
  */
 async function retryEndpoint (opts, maxRetry = 3) {
+  await sleepme(params.rate || 100)
   const { body, response } = await requestEndpoint(opts)
   if (response.statusCode === 200) return { body, response }
   else if (maxRetry > 0) {
@@ -144,24 +288,38 @@ function Runner () {
   return {
     bufferArray: [],
     requestList: [],
+    middlewares: [this.dateFilter, this.booleanFilter],
     jar: httpRequest.jar(),
     options: {},
     pagination: {
       total: 0,
-      interval: 50
+      interval: 100
     },
     token: null,
-    outputWriter,
     /**
      * This sample api controller requires auth to make subsequent requests
      */
     async controller () {
       try {
         this.validateEnv()
+        // await this.test()
         await this.auth()
         await this.prepare()
         await this.build()
         return this.publishFinal()
+      } catch (err) {
+        throw err
+      }
+    },
+    /**
+     * For testing only
+     */
+    async test () {
+      try {
+        this.options = initOptions('home')
+        const { body } = await requestEndpoint(this.options)
+        // eslint-disable-next-line no-undef
+        callback(null, { output: Buffer.from(body) })
       } catch (err) {
         throw err
       }
@@ -184,13 +342,12 @@ function Runner () {
      */
     async prepare () {
       try {
-        this.options = initOptions('ipsummary', {
+        this.options = initOptions(params.source, {
           jar: this.jar,
           headers: {
-            token: this.token
+            'X-SecurityCenter': this.token
           }
         })
-        this.options = initOptions('ipsummary')
         const { body } = await retryEndpoint(this.options)
         this.pagination.total = body.response.totalRecords
         this.write(body.response.results)
@@ -248,6 +405,7 @@ function Runner () {
         ? dataObject[rootElement]
         : dataObject
       const xmlBufferArray = jsData.reduce((preVal, curVal, i, src) => {
+        this.middlewares.map(fx => fx(curVal))
         preVal.push(Buffer.from(responseBuilder.buildObject(curVal), 'utf8'))
         return preVal
       }, [])
@@ -258,24 +416,58 @@ function Runner () {
      * @param {Array} list an array of data to write
      */
     write (list) {
-      if (params.print) this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
-      else list.map(item => this.outputWriter.createItem(item))
+      this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
+      // else list.map(item => this.outputWriter.createItem(item))
     },
     /**
      * Helper func to generate an array of options to map requests to
      */
     generateRequestList () {
-      while (this.options.body.end < this.pagination.total) {
+      while (this.options.body.query.endOffset < this.pagination.total) {
         this.incrementQuery()
-        this.requestList.push(this.options)
+        const newOptions = Object.assign({}, this.options)
+        this.requestList.push(newOptions)
       }
     },
     /**
      * Helper func to increment query by the interval value
      */
     incrementQuery () {
-      this.options.body.start += this.pagination.interval
-      this.options.body.end += this.pagination.interval
+      this.options.body.query.startOffset += this.pagination.interval
+      this.options.body.query.endOffset += this.pagination.interval
+    },
+    dateFilter (val) {
+      const dateProps = [
+        'lastAuthRun',
+        'lastUnauthRun',
+        'firstSeen',
+        'lastSeen',
+        'pluginPubDate',
+        'pluginModDate',
+        'vulnPubDate',
+        'patchPubDate'
+      ]
+      dateProps.map(prop => {
+        if (val[prop]) {
+          val[prop] = parseInt(val[prop]) < 1
+            ? null
+            : new Date(val[prop] * 1000).toISOString()
+        }
+      })
+    },
+    booleanFilter (val) {
+      const boolProps = [
+        'acceptRisk',
+        'recastRisk',
+        'hasBeenMitigated'
+      ]
+      boolProps.map(prop => {
+        if (val[prop]) {
+          val[prop] = parseInt(val[prop]) === 0
+            ? 'No'
+            : 'Yes'
+        }
+      })
     }
   }
 }
@@ -284,16 +476,15 @@ function Runner () {
  * Primary datafeed-js executor function
  */
 async function execute () {
-  const fs = require('fs')
   try {
     const data = await Runner().controller()
-    if (data) fs.writeFileSync('./datafeed-js-results.xml', data)
+    // eslint-disable-next-line no-undef
+    if (data) return callback(null, { output: data })
     // eslint-disable-next-line no-undef
     return callback(null)
   } catch (err) {
-    fs.writeFileSync(`DATAFEEDJS_${params.source}_ERROR.xml`, err)
     // eslint-disable-next-line no-undef
-    return callback(err.message)
+    return callback(null, { output: `${err}` })
   }
 }
 
