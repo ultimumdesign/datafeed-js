@@ -227,9 +227,9 @@ function initOptions (key, override = {}) {
 }
 
 /** Sleep function */
-function sleepme (milliseconds) {
-  return new Promise(resolve => setTimeout(resolve, milliseconds))
-}
+// function sleepme (milliseconds) {
+//   return new Promise(resolve => setTimeout(resolve, milliseconds))
+// }
 
 /**
  * Promise wrapper for request library
@@ -264,21 +264,26 @@ function requestEndpoint (options, chunked = false) {
 
 /**
  * Retry wrapper for requestEndpoint
- * @param {Object} opts Request options object
- * @param {Integer} maxRetry maxRetry count
+ * @param {*} opts pass through options object for request
+ * @param {*} retriesLeft retry max count
+ * @param {*} interval retry interval in ms
  */
-async function retryEndpoint (opts, maxRetry = 3) {
-  await sleepme(params.rate || 100)
-  const { body, response } = await requestEndpoint(opts)
-  if (response.statusCode === 200) return { body, response }
-  else if (maxRetry > 0) {
-    // Try again if we haven't reached maxRetries yet
-    setTimeout(async () => {
-      return retryEndpoint(opts, maxRetry - 1)
-    }, 1000)
-  } else {
-    throw new Error(`Reached max retries for retryEndpoint() :: ${response.statusCode}`)
-  }
+function retryEndpoint (opts, retriesLeft = 5, interval = 1000) {
+  return new Promise((resolve, reject) => {
+    requestEndpoint(opts)
+      .then(resolve)
+      .catch((error) => {
+        setTimeout(() => {
+          if (retriesLeft === 1) {
+            // reject('maximum retries exceeded');
+            reject(error)
+            return
+          }
+          // Passing on "reject" is the important part
+          retryEndpoint(opts, retriesLeft - 1).then(resolve, reject)
+        }, interval)
+      })
+  })
 }
 
 /**
@@ -288,7 +293,6 @@ function Runner () {
   return {
     bufferArray: [],
     requestList: [],
-    middlewares: [this.dateFilter, this.booleanFilter],
     jar: httpRequest.jar(),
     options: {},
     pagination: {
@@ -308,7 +312,7 @@ function Runner () {
         await this.build()
         return this.publishFinal()
       } catch (err) {
-        throw err
+        return err
       }
     },
     /**
@@ -321,7 +325,7 @@ function Runner () {
         // eslint-disable-next-line no-undef
         callback(null, { output: Buffer.from(body) })
       } catch (err) {
-        throw err
+        return err
       }
     },
     /**
@@ -334,7 +338,7 @@ function Runner () {
         this.token = body.response.token
         this.options = {}
       } catch (err) {
-        throw err
+        return err
       }
     },
     /**
@@ -351,8 +355,9 @@ function Runner () {
         const { body } = await retryEndpoint(this.options)
         this.pagination.total = body.response.totalRecords
         this.write(body.response.results)
+        this.options = {}
       } catch (err) {
-        throw err
+        return err
       }
     },
     /**
@@ -360,13 +365,27 @@ function Runner () {
      */
     async build () {
       try {
-        this.generateRequestList()
-        await Promise.all(this.requestList.map(async (opts) => {
-          const { body } = await retryEndpoint(opts)
-          this.write(body.response.results)
-        }))
+        this.options = initOptions(params.source, {
+          jar: this.jar,
+          headers: {
+            'X-SecurityCenter': this.token
+          }
+        })
+        this.generateRequestList(this.options)
+        const requestList = this.requestList
+        if (params.async) {
+          await Promise.all(requestList.map(async (opts) => {
+            const { body } = await retryEndpoint(opts)
+            this.write(body.response.results)
+          }))
+        } else {
+          for (let i = -1, len = requestList.length; i++ < len;) {
+            const { body } = await retryEndpoint(requestList[i])
+            this.write(body.response.results)
+          }
+        }
       } catch (err) {
-        throw err
+        return err
       }
     },
     /**
@@ -405,7 +424,8 @@ function Runner () {
         ? dataObject[rootElement]
         : dataObject
       const xmlBufferArray = jsData.reduce((preVal, curVal, i, src) => {
-        this.middlewares.map(fx => fx(curVal))
+        this.dateFilter(curVal)
+        this.booleanFilter(curVal)
         preVal.push(Buffer.from(responseBuilder.buildObject(curVal), 'utf8'))
         return preVal
       }, [])
@@ -422,19 +442,20 @@ function Runner () {
     /**
      * Helper func to generate an array of options to map requests to
      */
-    generateRequestList () {
-      while (this.options.body.query.endOffset < this.pagination.total) {
-        this.incrementQuery()
-        const newOptions = Object.assign({}, this.options)
+    generateRequestList (opts) {
+      const { interval, total } = this.pagination
+      for (let i = opts.body.query.endOffset, len = total; i < len; i += interval) {
+        const newOptions = this.incrementQuery(opts, interval)
         this.requestList.push(newOptions)
       }
     },
     /**
      * Helper func to increment query by the interval value
      */
-    incrementQuery () {
-      this.options.body.query.startOffset += this.pagination.interval
-      this.options.body.query.endOffset += this.pagination.interval
+    incrementQuery (opts, interval) {
+      opts.body.query.startOffset += interval
+      opts.body.query.endOffset += interval
+      return Object.assign({}, opts)
     },
     dateFilter (val) {
       const dateProps = [
@@ -448,7 +469,7 @@ function Runner () {
         'patchPubDate'
       ]
       dateProps.map(prop => {
-        if (val[prop]) {
+        if (val.hasOwnProperty(prop)) {
           val[prop] = parseInt(val[prop]) < 1
             ? null
             : new Date(val[prop] * 1000).toISOString()
@@ -462,7 +483,7 @@ function Runner () {
         'hasBeenMitigated'
       ]
       boolProps.map(prop => {
-        if (val[prop]) {
+        if (val.hasOwnProperty(prop)) {
           val[prop] = parseInt(val[prop]) === 0
             ? 'No'
             : 'Yes'
