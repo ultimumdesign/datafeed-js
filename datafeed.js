@@ -371,16 +371,18 @@ function Runner () {
             'X-SecurityCenter': this.token
           }
         })
-        this.generateRequestList(this.options)
-        const requestList = this.requestList
         if (params.async) {
+          this.generateRequestList(this.options)
+          const requestList = this.requestList
           await Promise.all(requestList.map(async (opts) => {
             const { body } = await retryEndpoint(opts)
             this.write(body.response.results)
           }))
         } else {
-          for (let i = -1, len = requestList.length; i++ < len;) {
-            const { body } = await retryEndpoint(requestList[i])
+          const { interval, total } = this.pagination
+          for (let i = -1, len = total; i++ < len;) {
+            this.incrementQuery(this.options, interval)
+            const { body } = await retryEndpoint(this.options)
             this.write(body.response.results)
           }
         }
@@ -455,7 +457,7 @@ function Runner () {
     incrementQuery (opts, interval) {
       opts.body.query.startOffset += interval
       opts.body.query.endOffset += interval
-      return Object.assign({}, opts)
+      return opts
     },
     dateFilter (val) {
       const dateProps = [
