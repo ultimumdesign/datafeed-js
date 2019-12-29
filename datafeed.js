@@ -105,7 +105,7 @@ function initOptions (key, override = {}) {
           'tool': 'sumip',
           'sourceType': 'cumulative',
           'startOffset': 0,
-          'endOffset': 100,
+          'endOffset': 50,
           'filters': [
             {
               'id': 'lastSeen',
@@ -147,7 +147,7 @@ function initOptions (key, override = {}) {
           'tool': 'vulndetails',
           'sourceType': 'cumulative',
           'startOffset': 0,
-          'endOffset': 100,
+          'endOffset': 50,
           'filters': [
             {
               'id': 'pluginType',
@@ -193,7 +193,7 @@ function initOptions (key, override = {}) {
           'tool': 'vulndetails',
           'sourceType': 'cumulative',
           'startOffset': 0,
-          'endOffset': 100,
+          'endOffset': 50,
           'filters': [
             {
               'id': 'pluginType',
@@ -297,7 +297,7 @@ function Runner () {
     options: {},
     pagination: {
       total: 0,
-      interval: 100
+      interval: 50
     },
     token: null,
     /**
@@ -309,7 +309,6 @@ function Runner () {
         // await this.test()
         await this.auth()
         await this.prepare()
-        await this.build()
         return this.publishFinal()
       } catch (err) {
         return err
@@ -355,36 +354,11 @@ function Runner () {
         const { body } = await retryEndpoint(this.options)
         this.pagination.total = body.response.totalRecords
         this.write(body.response.results)
-        this.options = {}
-      } catch (err) {
-        return err
-      }
-    },
-    /**
-     * Looping call to retrieve all records
-     */
-    async build () {
-      try {
-        this.options = initOptions(params.source, {
-          jar: this.jar,
-          headers: {
-            'X-SecurityCenter': this.token
-          }
-        })
-        if (params.async) {
-          this.generateRequestList(this.options)
-          const requestList = this.requestList
-          await Promise.all(requestList.map(async (opts) => {
-            const { body } = await retryEndpoint(opts)
-            this.write(body.response.results)
-          }))
-        } else {
-          const { interval, total } = this.pagination
-          for (let i = -1, len = total; i++ < len;) {
-            this.incrementQuery(this.options, interval)
-            const { body } = await retryEndpoint(this.options)
-            this.write(body.response.results)
-          }
+        const { interval, total } = this.pagination
+        for (let i = interval; i < total; i += interval) {
+          this.incrementQuery(this.options, interval)
+          const { body } = await retryEndpoint(this.options)
+          this.write(body.response.results)
         }
       } catch (err) {
         return err
