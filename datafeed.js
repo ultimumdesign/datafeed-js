@@ -93,38 +93,38 @@ function initOptions (key, override = {}) {
       url: `${params.baseUrl}/rest/analysis`,
       json: true,
       body: {
-        'query': {
-          'name': '',
-          'description': '',
-          'context': '',
-          'status': -1,
-          'createdTime': 0,
-          'modifiedTime': 0,
-          'groups': [],
-          'type': 'vuln',
-          'tool': 'sumip',
-          'sourceType': 'cumulative',
-          'startOffset': 0,
-          'endOffset': 50,
-          'filters': [
+        query: {
+          name: '',
+          description: '',
+          context: '',
+          status: -1,
+          createdTime: 0,
+          modifiedTime: 0,
+          groups: [],
+          type: 'vuln',
+          tool: 'sumip',
+          sourceType: 'cumulative',
+          startOffset: 0,
+          endOffset: 500,
+          filters: [
             {
-              'id': 'lastSeen',
-              'filterName': 'lastSeen',
-              'operator': '=',
-              'type': 'vuln',
-              'isPredefined': true,
-              'value': `${params.rangeStart}:${params.rangeEnd}`
+              id: 'lastSeen',
+              filterName: 'lastSeen',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: `${params.rangeStart}:${params.rangeEnd}`
             }
           ],
-          'sortColumn': 'score',
-          'sortDirection': 'desc',
-          'vulnTool': 'sumip'
+          sortColumn: 'score',
+          sortDirection: 'desc',
+          vulnTool: 'sumip'
         },
-        'sourceType': 'cumulative',
-        'sortField': 'score',
-        'sortDir': 'desc',
-        'columns': [],
-        'type': 'vuln'
+        sourceType: 'cumulative',
+        sortField: 'score',
+        sortDir: 'desc',
+        columns: [],
+        type: 'vuln'
       },
       rejectUnauthorized: false
     },
@@ -135,42 +135,50 @@ function initOptions (key, override = {}) {
       url: `${params.baseUrl}/rest/analysis`,
       json: true,
       body: {
-        'query': {
-          'name': '',
-          'description': '',
-          'context': '',
-          'status': -1,
-          'createdTime': 0,
-          'modifiedTime': 0,
-          'groups': [],
-          'type': 'vuln',
-          'tool': 'vulndetails',
-          'sourceType': 'cumulative',
-          'startOffset': 0,
-          'endOffset': 50,
-          'filters': [
+        query: {
+          name: '',
+          description: '',
+          context: '',
+          status: -1,
+          createdTime: 0,
+          modifiedTime: 0,
+          groups: [],
+          type: 'vuln',
+          tool: 'vulndetails',
+          sourceType: 'cumulative',
+          startOffset: 0,
+          endOffset: 500,
+          filters: [
             {
-              'id': 'pluginType',
-              'filterName': 'pluginType',
-              'operator': '=',
-              'type': 'vuln',
-              'isPredefined': true,
-              'value': 'active'
+              id: 'pluginType',
+              filterName: 'pluginType',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: 'active'
             },
             {
-              'id': 'lastSeen',
-              'filterName': 'lastSeen',
-              'operator': '=',
-              'type': 'vuln',
-              'isPredefined': true,
-              'value': `${params.rangeStart}:${params.rangeEnd}`
+              id: 'lastSeen',
+              filterName: 'lastSeen',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: `${params.rangeStart}:${params.rangeEnd}`
+            },
+            {
+              id: 'repository',
+              filterName: 'repository',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: [{ id: '2' }]
             }
           ],
-          'vulnTool': 'vulndetails'
+          vulnTool: 'vulndetails'
         },
-        'sourceType': 'cumulative',
-        'columns': [],
-        'type': 'vuln'
+        sourceType: 'cumulative',
+        columns: [],
+        type: 'vuln'
       },
       rejectUnauthorized: false
     },
@@ -181,42 +189,50 @@ function initOptions (key, override = {}) {
       url: `${params.baseUrl}/rest/analysis`,
       json: true,
       body: {
-        'query': {
-          'name': '',
-          'description': '',
-          'context': '',
-          'status': -1,
-          'createdTime': 0,
-          'modifiedTime': 0,
-          'groups': [],
-          'type': 'vuln',
-          'tool': 'vulndetails',
-          'sourceType': 'cumulative',
-          'startOffset': 0,
-          'endOffset': 50,
-          'filters': [
+        query: {
+          name: '',
+          description: '',
+          context: '',
+          status: -1,
+          createdTime: 0,
+          modifiedTime: 0,
+          groups: [],
+          type: 'vuln',
+          tool: 'vulndetails',
+          sourceType: 'cumulative',
+          startOffset: 0,
+          endOffset: 500,
+          filters: [
             {
-              'id': 'pluginType',
-              'filterName': 'pluginType',
-              'operator': '=',
-              'type': 'vuln',
-              'isPredefined': true,
-              'value': 'compliance'
+              id: 'pluginType',
+              filterName: 'pluginType',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: 'compliance'
             },
             {
-              'id': 'lastSeen',
-              'filterName': 'lastSeen',
-              'operator': '=',
-              'type': 'vuln',
-              'isPredefined': true,
-              'value': `${params.rangeStart}:${params.rangeEnd}`
+              id: 'lastSeen',
+              filterName: 'lastSeen',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: `${params.rangeStart}:${params.rangeEnd}`
+            },
+            {
+              id: 'repository',
+              filterName: 'repository',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: [{ id: '5' }]
             }
           ],
-          'vulnTool': 'vulndetails'
+          vulnTool: 'vulndetails'
         },
-        'sourceType': 'cumulative',
-        'columns': [],
-        'type': 'vuln'
+        sourceType: 'cumulative',
+        columns: [],
+        type: 'vuln'
       },
       rejectUnauthorized: false
     }
@@ -297,7 +313,7 @@ function Runner () {
     options: {},
     pagination: {
       total: 0,
-      interval: 50
+      interval: 500
     },
     token: null,
     /**
