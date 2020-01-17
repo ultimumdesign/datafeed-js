@@ -284,7 +284,7 @@ function requestEndpoint (options, chunked = false) {
  * @param {*} retriesLeft retry max count
  * @param {*} interval retry interval in ms
  */
-function retryEndpoint (opts, retriesLeft = 5, interval = 1000) {
+function retryEndpoint (opts, retriesLeft = 10, interval = 2500) {
   return new Promise((resolve, reject) => {
     requestEndpoint(opts)
       .then(resolve)
@@ -497,7 +497,7 @@ async function execute () {
     return callback(null)
   } catch (err) {
     // eslint-disable-next-line no-undef
-    return callback(null, { output: `${err}` })
+    return callback(null, { output: JSON.stringify(err) })
   }
 }
 
