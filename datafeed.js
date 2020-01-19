@@ -39,8 +39,7 @@ const params = context.CustomParameters
 // writes to the file system this next statement creates an instance of the write and contains
 // a method .writeItem(item)
 // eslint-disable-next-line no-undef
-// const outputWriter = context.OutputWriter.create('XML', { RootNode: 'RECORD' })
-// const outputWriter = () => false
+const outputWriter = context.OutputWriter.create('XML', { RootNode: 'ROOT' })
 
 // DATA FEED TOKENS
 // --This object contains the data feed tokens set by the system. Examples: LastRunTime, LastFileProcessed, PreviousRunContext, etc..
@@ -316,6 +315,7 @@ function Runner () {
       interval: 500
     },
     token: null,
+    outputWriter,
     /**
      * This sample api controller requires auth to make subsequent requests
      */
@@ -428,10 +428,16 @@ function Runner () {
      * @param {Array} list an array of data to write
      */
     write (list) {
-      this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
-      // else list.map(item => this.outputWriter.createItem(item))
+      if (params.mode && params.mode === 'writer') {
+        for (let i = -1, len = list.length; i++ < len;) {
+          this.outputWriter.createItem(list[i])
+        }
+      } else {
+        this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
+      }
     },
     /**
+     *
      * Helper func to generate an array of options to map requests to
      */
     generateRequestList (opts) {
@@ -497,7 +503,7 @@ async function execute () {
     return callback(null)
   } catch (err) {
     // eslint-disable-next-line no-undef
-    return callback(null, { output: JSON.stringify(err) })
+    return callback(null, { output: `${err}` })
   }
 }
 
