@@ -1,0 +1,6 @@
+login='username of account',
+password='password of login',
+baseUrl='base url of api',
+source='which options object to make primary API requests to',
+rangeStart='Starting range of SC date filter',
+rangeEnd='End range of SC date filter'
