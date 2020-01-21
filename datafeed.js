@@ -4,15 +4,6 @@
 const httpRequest = require('request')
 const parser = require('xml2js')
 
-// TEST CALL BACK
-/*
-function callback (err, data) {
-  if (err) throw err
-  const fs = require('fs')
-  fs.writeFileSync('./datafeed-js-results.xml', data.output)
-}
-*/
-
 // REQUIRED PARAMETERS
 // An object in which the keys describe the required process context parameters for options/execution
 // this is passed into the execution scope from the Archer datafeed config
@@ -32,18 +23,14 @@ const requiredParams = {
 // --    Special Chars:  params["parameterName"]   Example: params["u$ername"] or params["pa$$word"]
 // eslint-disable-next-line no-undef
 const params = context.CustomParameters
-// const params = require('./params.json')
 
 // OUTPUT WRITER
 // Archer added a convenience function attached to the context global that enables looping
 // writes to the file system this next statement creates an instance of the write and contains
 // a method .writeItem(item)
 // eslint-disable-next-line no-undef
-const outputWriter = context.OutputWriter.create('XML', { RootNode: 'Results' })
+const outputWriter = context.OutputWriter.create('XML', { RootNode: 'DATA' })
 
-//const fakeData = [{name: 'jan', job: 'dev'}, {name: 'kyle', 'job': 'admin'}]
-
-//fakeData.forEach(item => outputWriter.writeItem(item))
 // DATA FEED TOKENS
 // --This object contains the data feed tokens set by the system. Examples: LastRunTime, LastFileProcessed, PreviousRunContext, etc..
 // --NOTE: The tokens are READ ONLY by this script, save for the "PreviousRunContext" token, which is discussed later.
@@ -244,11 +231,6 @@ function initOptions (key, override = {}) {
   return Object.assign(selectedOption, override)
 }
 
-/** Sleep function */
-// function sleepme (milliseconds) {
-//   return new Promise(resolve => setTimeout(resolve, milliseconds))
-// }
-
 /**
  * Promise wrapper for request library
  * @param {Object} options
@@ -324,23 +306,9 @@ function Runner () {
     async controller () {
       try {
         this.validateEnv()
-        // await this.test()
         await this.auth()
         await this.prepare()
         return this.publishFinal()
-      } catch (err) {
-        return err
-      }
-    },
-    /**
-     * For testing only
-     */
-    async test () {
-      try {
-        this.options = initOptions('home')
-        const { body } = await requestEndpoint(this.options)
-        // eslint-disable-next-line no-undef
-        callback(null, { output: Buffer.from(body) })
       } catch (err) {
         return err
       }
@@ -430,24 +398,13 @@ function Runner () {
      * @param {Array} list an array of data to write
      */
     write (list) {
-      if (params.mode && params.mode === 'writer') {
+      if (params.mode && params.mode === 'buffer') {
+        this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
+      } else {
         const responseBuilder = new parser.Builder(initOptions('buildXml'))
         list.forEach(item => {
           outputWriter.writeItem(responseBuilder.buildObject(item))
         })
-      } else {
-        this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
-      }
-    },
-    /**
-     *
-     * Helper func to generate an array of options to map requests to
-     */
-    generateRequestList (opts) {
-      const { interval, total } = this.pagination
-      for (let i = opts.body.query.endOffset, len = total; i < len; i += interval) {
-        const newOptions = this.incrementQuery(opts, interval)
-        this.requestList.push(newOptions)
       }
     },
     /**
@@ -470,7 +427,8 @@ function Runner () {
         'patchPubDate'
       ]
       dateProps.map(prop => {
-        if (val.hasOwnProperty(prop)) {
+        const hasProp = Object.prototype.hasOwnProperty.call(val, prop)
+        if (hasProp) {
           val[prop] = parseInt(val[prop]) < 1
             ? null
             : new Date(val[prop] * 1000).toISOString()
@@ -484,7 +442,8 @@ function Runner () {
         'hasBeenMitigated'
       ]
       boolProps.map(prop => {
-        if (val.hasOwnProperty(prop)) {
+        const hasProp = Object.prototype.hasOwnProperty.call(val, prop)
+        if (hasProp) {
           val[prop] = parseInt(val[prop]) === 0
             ? 'No'
             : 'Yes'
@@ -498,7 +457,7 @@ Runner().controller().then(data => {
   // eslint-disable-next-line no-undef
   if (data) callback(null, { output: data })
   // eslint-disable-next-line no-undef
-  callback(null, { previousRunContext: 'test' })
+  callback(null)
 }).catch(err => {
   // eslint-disable-next-line no-undef
   callback(null, { output: `${err}` })
