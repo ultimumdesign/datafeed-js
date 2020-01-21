@@ -41,6 +41,9 @@ const params = context.CustomParameters
 // eslint-disable-next-line no-undef
 const outputWriter = context.OutputWriter.create('XML', { RootNode: 'Results' })
 
+//const fakeData = [{name: 'jan', job: 'dev'}, {name: 'kyle', 'job': 'admin'}]
+
+//fakeData.forEach(item => outputWriter.writeItem(item))
 // DATA FEED TOKENS
 // --This object contains the data feed tokens set by the system. Examples: LastRunTime, LastFileProcessed, PreviousRunContext, etc..
 // --NOTE: The tokens are READ ONLY by this script, save for the "PreviousRunContext" token, which is discussed later.
@@ -315,7 +318,6 @@ function Runner () {
       interval: 500
     },
     token: null,
-    outputWriter,
     /**
      * This sample api controller requires auth to make subsequent requests
      */
@@ -429,9 +431,10 @@ function Runner () {
      */
     write (list) {
       if (params.mode && params.mode === 'writer') {
-        for (let i = -1, len = list.length; i++ < len;) {
-          this.outputWriter.writeItem(list[i])
-        }
+        const responseBuilder = new parser.Builder(initOptions('buildXml'))
+        list.forEach(item => {
+          outputWriter.writeItem(responseBuilder.buildObject(item))
+        })
       } else {
         this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
       }
@@ -491,22 +494,14 @@ function Runner () {
   }
 }
 
-/**
- * Primary datafeed-js executor function
- */
-async function execute () {
-  try {
-    const data = await Runner().controller()
-    // eslint-disable-next-line no-undef
-    if (data) return callback(null, { output: data })
-    // eslint-disable-next-line no-undef
-    return callback(null)
-  } catch (err) {
-    // eslint-disable-next-line no-undef
-    return callback(null, { output: `${err}` })
-  }
-}
+Runner().controller().then(data => {
+  // eslint-disable-next-line no-undef
+  if (data) callback(null, { output: data })
+  // eslint-disable-next-line no-undef
+  callback(null, { previousRunContext: 'test' })
+}).catch(err => {
+  // eslint-disable-next-line no-undef
+  callback(null, { output: `${err}` })
+})
 
-execute()
-
-module.exports = execute
+module.exports = Runner
