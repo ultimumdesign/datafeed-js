@@ -39,7 +39,7 @@ const params = context.CustomParameters
 // writes to the file system this next statement creates an instance of the write and contains
 // a method .writeItem(item)
 // eslint-disable-next-line no-undef
-const outputWriter = context.OutputWriter.create('XML', { RootNode: 'ROOT' })
+const outputWriter = context.OutputWriter.create('XML', { RootNode: 'Results' })
 
 // DATA FEED TOKENS
 // --This object contains the data feed tokens set by the system. Examples: LastRunTime, LastFileProcessed, PreviousRunContext, etc..
@@ -430,7 +430,7 @@ function Runner () {
     write (list) {
       if (params.mode && params.mode === 'writer') {
         for (let i = -1, len = list.length; i++ < len;) {
-          this.outputWriter.createItem(list[i])
+          this.outputWriter.writeItem(list[i])
         }
       } else {
         this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
