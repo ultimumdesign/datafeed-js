@@ -103,6 +103,14 @@ function initOptions (key, override = {}) {
               type: 'vuln',
               isPredefined: true,
               value: `${params.rangeStart}:${params.rangeEnd}`
+            },
+            {
+              id: 'repository',
+              filterName: 'repository',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: [{ id: '2' }, { id: '5' }]
             }
           ],
           sortColumn: 'score',
@@ -160,7 +168,7 @@ function initOptions (key, override = {}) {
               operator: '=',
               type: 'vuln',
               isPredefined: true,
-              value: [{ id: '2' }]
+              value: [{ id: '2' }, { id: '5' }]
             }
           ],
           vulnTool: 'vulndetails'
@@ -214,7 +222,7 @@ function initOptions (key, override = {}) {
               operator: '=',
               type: 'vuln',
               isPredefined: true,
-              value: [{ id: '5' }]
+              value: [{ id: '2' }, { id: '5' }]
             }
           ],
           vulnTool: 'vulndetails'
@@ -457,7 +465,7 @@ Runner().controller().then(data => {
   // eslint-disable-next-line no-undef
   if (data) callback(null, { output: data })
   // eslint-disable-next-line no-undef
-  callback(null)
+  callback(null, { previousRunContext: 'test' })
 }).catch(err => {
   // eslint-disable-next-line no-undef
   callback(null, { output: `${err}` })
