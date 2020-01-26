@@ -411,6 +411,8 @@ function Runner () {
       } else {
         const responseBuilder = new parser.Builder(initOptions('buildXml'))
         list.forEach(item => {
+          this.dateFilter(item)
+          this.booleanFilter(item)
           outputWriter.writeItem(responseBuilder.buildObject(item))
         })
       }
