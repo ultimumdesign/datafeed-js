@@ -232,8 +232,57 @@ function initOptions (key, override = {}) {
         type: 'vuln'
       },
       rejectUnauthorized: false
+    },
+    // data endpoint
+    software: {
+      method: 'POST',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}/rest/analysis`,
+      json: true,
+      body: {
+        query: {
+          context: '',
+          createdTime: 0,
+          description: '',
+          endOffset: 50,
+          filters: [
+            {
+              id: 'lastSeen',
+              filterName: 'lastSeen',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: `${params.rangeStart}:${params.rangeEnd}`
+            },
+            {
+              id: 'repository',
+              filterName: 'repository',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: [{ id: '2' }, { id: '5' }]
+            }
+          ],
+          groups: [],
+          modifiedTime: 0,
+          name: '',
+          sortColumn: 'count',
+          sortDirection: 'desc',
+          sourceType: 'cumulative',
+          startOffset: 0,
+          status: -1,
+          tool: 'listsoftware',
+          type: 'vuln',
+          vulnTool: 'listsoftware'
+        },
+        sortDir: 'desc',
+        sortField: 'count',
+        sourceType: 'cumulative',
+        type: 'vuln',
+        columns: []
+      },
+      rejectUnauthorized: false
     }
-
   }
   const selectedOption = Object.assign({}, defaultOptions[key])
   return Object.assign(selectedOption, override)
