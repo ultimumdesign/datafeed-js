@@ -244,7 +244,7 @@ function initOptions (key, override = {}) {
           context: '',
           createdTime: 0,
           description: '',
-          endOffset: 50,
+          endOffset: 500,
           filters: [
             {
               id: 'lastSeen',
