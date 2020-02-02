@@ -55,6 +55,14 @@ function initOptions (key, override = {}) {
         newline: '\n'
       }
     },
+    repoFilter: {
+      id: 'repository',
+      filterName: 'repository',
+      operator: '=',
+      type: 'vuln',
+      isPredefined: true,
+      value: []
+    },
     /** Custom Options */
     // Authentication endpoint
     home: {
@@ -73,6 +81,13 @@ function initOptions (key, override = {}) {
         password: params.password,
         releaseSession: true
       },
+      rejectUnauthorized: false
+    },
+    repos: {
+      method: 'GET',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}/rest/group/3`,
+      json: true,
       rejectUnauthorized: false
     },
     // data endpoint
@@ -103,14 +118,6 @@ function initOptions (key, override = {}) {
               type: 'vuln',
               isPredefined: true,
               value: `${params.rangeStart}:${params.rangeEnd}`
-            },
-            {
-              id: 'repository',
-              filterName: 'repository',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: [{ id: '2' }, { id: '5' }]
             }
           ],
           sortColumn: 'score',
@@ -161,14 +168,6 @@ function initOptions (key, override = {}) {
               type: 'vuln',
               isPredefined: true,
               value: `${params.rangeStart}:${params.rangeEnd}`
-            },
-            {
-              id: 'repository',
-              filterName: 'repository',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: [{ id: '2' }, { id: '5' }]
             }
           ],
           vulnTool: 'vulndetails'
@@ -215,14 +214,6 @@ function initOptions (key, override = {}) {
               type: 'vuln',
               isPredefined: true,
               value: `${params.rangeStart}:${params.rangeEnd}`
-            },
-            {
-              id: 'repository',
-              filterName: 'repository',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: [{ id: '2' }, { id: '5' }]
             }
           ],
           vulnTool: 'vulndetails'
@@ -253,14 +244,6 @@ function initOptions (key, override = {}) {
               type: 'vuln',
               isPredefined: true,
               value: `${params.rangeStart}:${params.rangeEnd}`
-            },
-            {
-              id: 'repository',
-              filterName: 'repository',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: [{ id: '2' }, { id: '5' }]
             }
           ],
           groups: [],
@@ -348,8 +331,6 @@ function retryEndpoint (opts, retriesLeft = 10, interval = 2500) {
  */
 function Runner () {
   return {
-    bufferArray: [],
-    requestList: [],
     jar: httpRequest.jar(),
     options: {},
     pagination: {
@@ -357,6 +338,7 @@ function Runner () {
       interval: 500
     },
     token: null,
+    repos: [],
     /**
      * This sample api controller requires auth to make subsequent requests
      */
@@ -364,14 +346,16 @@ function Runner () {
       try {
         this.validateEnv()
         await this.auth()
-        await this.prepare()
-        return this.publishFinal()
+        await this.getRepos()
+        for (let i = 0; i < this.repos.length; i += 1) {
+          await this.prepare(this.repos[i])
+        }
       } catch (err) {
-        return err
+        throw err
       }
     },
     /**
-     * Authenication stage of the API calls
+     * Authentication stage of the API calls
      */
     async auth () {
       try {
@@ -380,13 +364,33 @@ function Runner () {
         this.token = body.response.token
         this.options = {}
       } catch (err) {
-        return err
+        throw err
+      }
+    },
+    /**
+     * Initial call for repos list
+     */
+    async getRepos () {
+      try {
+        this.options = initOptions('repos', {
+          jar: this.jar,
+          headers: {
+            'X-SecurityCenter': this.token
+          }
+        })
+        const { body } = await retryEndpoint(this.options)
+        body.response.repositories.forEach(repo => {
+          this.repos.push(Object.assign({}, repo))
+        })
+        this.options = {}
+      } catch (err) {
+        throw err
       }
     },
     /**
      * Initial call and pagination variables
      */
-    async prepare () {
+    async prepare (repositoryObject) {
       try {
         this.options = initOptions(params.source, {
           jar: this.jar,
@@ -394,30 +398,21 @@ function Runner () {
             'X-SecurityCenter': this.token
           }
         })
+        const repoName = repositoryObject.name
+        const repoFilterOption = initOptions('repoFilter', { value: [repositoryObject] })
+        this.options.body.query.filters.push(repoFilterOption)
         const { body } = await retryEndpoint(this.options)
         this.pagination.total = body.response.totalRecords
-        this.write(body.response.results)
+        this.write(body.response.results, repoName)
         const { interval, total } = this.pagination
         for (let i = interval; i < total; i += interval) {
           this.incrementQuery(this.options, interval)
           const { body } = await retryEndpoint(this.options)
-          this.write(body.response.results)
+          this.write(body.response.results, repoName)
         }
       } catch (err) {
-        return err
+        throw err
       }
-    },
-    /**
-     * Prepare final output before callback is invoked
-     */
-    publishFinal () {
-      if (this.bufferArray.length) {
-        const start = Buffer.from('<DATA>\n', 'utf8')
-        const data = Buffer.concat(this.bufferArray)
-        const end = Buffer.from('</DATA>', 'utf-8')
-        return Buffer.concat([start, data, end])
-      }
-      return false
     },
     /**
      * Validates requiredParams object against the process environment variables.
@@ -431,40 +426,17 @@ function Runner () {
       })
     },
     /**
-     * Converts a json array of data into a single buffer object
-     * @param {Object | String} jsonData json/js array of data
-     * @param {String} [rootElement = null] root element to loop through
-     */
-    jsonArrayToXmlBuffer (jsonData, rootElement = null) {
-      const responseBuilder = new parser.Builder(initOptions('buildXml'))
-      const dataObject = typeof jsonData === 'string'
-        ? JSON.parse(jsonData) : jsonData
-      const jsData = rootElement
-        ? dataObject[rootElement]
-        : dataObject
-      const xmlBufferArray = jsData.reduce((preVal, curVal, i, src) => {
-        this.dateFilter(curVal)
-        this.booleanFilter(curVal)
-        preVal.push(Buffer.from(responseBuilder.buildObject(curVal), 'utf8'))
-        return preVal
-      }, [])
-      return Buffer.concat(xmlBufferArray)
-    },
-    /**
      * Writes data depends on params.print
      * @param {Array} list an array of data to write
      */
-    write (list) {
-      if (params.mode && params.mode === 'buffer') {
-        this.bufferArray.push(this.jsonArrayToXmlBuffer(list))
-      } else {
-        const responseBuilder = new parser.Builder(initOptions('buildXml'))
-        list.forEach(item => {
-          this.dateFilter(item)
-          this.booleanFilter(item)
-          outputWriter.writeItem(responseBuilder.buildObject(item))
-        })
-      }
+    write (list, repoName) {
+      const responseBuilder = new parser.Builder(initOptions('buildXml'))
+      list.forEach(item => {
+        item.repoName = repoName
+        this.dateFilter(item)
+        this.booleanFilter(item)
+        outputWriter.writeItem(responseBuilder.buildObject(item))
+      })
     },
     /**
      * Helper func to increment query by the interval value
@@ -512,10 +484,7 @@ function Runner () {
   }
 }
 
-Runner().controller().then(data => {
-  // eslint-disable-next-line no-undef
-  if (data) callback(null, { output: data })
-  // eslint-disable-next-line no-undef
+Runner().controller().then(() => {
   callback(null, { previousRunContext: 'test' })
 }).catch(err => {
   // eslint-disable-next-line no-undef
