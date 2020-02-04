@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
 // APPROVED LIBRARY REFERENCES
 // --All other libraries are blocked during sandboxed code execution.
 // --For more details, visit https://www.npmjs.com/ and search for the library name.
@@ -12,8 +13,8 @@ const requiredParams = {
   password: 'password of login',
   baseUrl: 'base url of api',
   source: 'which options object to make primary API requests to',
-  rangeStart: 'Starting range of SC date filter',
-  rangeEnd: 'End range of SC date filter'
+  range: 'Start and end range of SC date filter separate integer values with a ":" eg. 0:30'
+  // optional param: 'severity' eg: 0,1,2,3,4
 }
 
 // CUSTOM PARAMETERS
@@ -55,6 +56,7 @@ function initOptions (key, override = {}) {
         newline: '\n'
       }
     },
+    // filters
     repoFilter: {
       id: 'repository',
       filterName: 'repository',
@@ -63,8 +65,7 @@ function initOptions (key, override = {}) {
       isPredefined: true,
       value: []
     },
-    /** Custom Options */
-    // Authentication endpoint
+    // endpoint options
     home: {
       method: 'GET',
       secureProtocol: 'TLSv1_2_method',
@@ -117,7 +118,15 @@ function initOptions (key, override = {}) {
               operator: '=',
               type: 'vuln',
               isPredefined: true,
-              value: `${params.rangeStart}:${params.rangeEnd}`
+              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
+            },
+            {
+              id: 'severity',
+              filterName: 'severity',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: params.severity || '0,1,2,3,4'
             }
           ],
           sortColumn: 'score',
@@ -167,7 +176,15 @@ function initOptions (key, override = {}) {
               operator: '=',
               type: 'vuln',
               isPredefined: true,
-              value: `${params.rangeStart}:${params.rangeEnd}`
+              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
+            },
+            {
+              id: 'severity',
+              filterName: 'severity',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: params.severity || '0,1,2,3,4'
             }
           ],
           vulnTool: 'vulndetails'
@@ -213,7 +230,15 @@ function initOptions (key, override = {}) {
               operator: '=',
               type: 'vuln',
               isPredefined: true,
-              value: `${params.rangeStart}:${params.rangeEnd}`
+              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
+            },
+            {
+              id: 'severity',
+              filterName: 'severity',
+              operator: '=',
+              type: 'vuln',
+              isPredefined: true,
+              value: params.severity || '0,1,2,3,4'
             }
           ],
           vulnTool: 'vulndetails'
@@ -243,7 +268,7 @@ function initOptions (key, override = {}) {
               operator: '=',
               type: 'vuln',
               isPredefined: true,
-              value: `${params.rangeStart}:${params.rangeEnd}`
+              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
             }
           ],
           groups: [],
@@ -485,7 +510,8 @@ function Runner () {
 }
 
 Runner().controller().then(() => {
-  callback(null, { previousRunContext: 'test' })
+  // eslint-disable-next-line no-undef
+  callback(null, { previousRunContext: params.source })
 }).catch(err => {
   // eslint-disable-next-line no-undef
   callback(null, { output: `${err}` })
