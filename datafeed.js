@@ -9,12 +9,9 @@ const parser = require('xml2js')
 // An object in which the keys describe the required process context parameters for options/execution
 // this is passed into the execution scope from the Archer datafeed config
 const requiredParams = {
-  login: 'username of account',
-  password: 'password of login',
+  apiKey: 'username of account',
   baseUrl: 'base url of api',
-  source: 'which options object to make primary API requests to',
-  range: 'Start and end range of SC date filter separate integer values with a ":" eg. 0:30'
-  // optional param: 'severity' eg: 0,1,2,3,4
+  source: 'which options object to make primary API requests to'
 }
 
 // CUSTOM PARAMETERS
@@ -56,240 +53,46 @@ function initOptions (key, override = {}) {
         newline: '\n'
       }
     },
-    // filters
-    repoFilter: {
-      id: 'repository',
-      filterName: 'repository',
-      operator: '=',
-      type: 'vuln',
-      isPredefined: true,
-      value: []
-    },
-    // endpoint options
-    home: {
+    // data endpoint
+    campaigns: {
       method: 'GET',
       secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}`,
-      rejectUnauthorized: false
-    },
-    auth: {
-      method: 'POST',
-      secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/rest/token`,
+      url: `${params.baseUrl}/v1/phishing/campaigns`,
       json: true,
-      body: {
-        username: params.login,
-        password: params.password,
-        releaseSession: true
+      rejectUnauthorized: false,
+      headers: {
+        Authorization: `Bearer ${params.apiToken}`
       },
-      rejectUnauthorized: false
+      qs: {
+        page: 1,
+        per_page: 500
+      }
     },
-    repos: {
+    // data endpoint
+    psts: {
       method: 'GET',
       secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/rest/group/3`,
+      url: `${params.baseUrl}/v1/phishing/security_tests/{{pst_id}}`,
       json: true,
-      rejectUnauthorized: false
+      rejectUnauthorized: false,
+      headers: {
+        Authorization: `Bearer ${params.apiToken}`
+      }
     },
     // data endpoint
-    ipsummary: {
-      method: 'POST',
+    recipients: {
+      method: 'GET',
       secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/rest/analysis`,
+      url: `${params.baseUrl}/v1/phishing/security_tests/{{pst_id}}/recipients`,
       json: true,
-      body: {
-        query: {
-          name: '',
-          description: '',
-          context: '',
-          status: -1,
-          createdTime: 0,
-          modifiedTime: 0,
-          groups: [],
-          type: 'vuln',
-          tool: 'sumip',
-          sourceType: 'cumulative',
-          startOffset: 0,
-          endOffset: 500,
-          filters: [
-            {
-              id: 'lastSeen',
-              filterName: 'lastSeen',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
-            },
-            {
-              id: 'severity',
-              filterName: 'severity',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: params.severity || '0,1,2,3,4'
-            }
-          ],
-          sortColumn: 'score',
-          sortDirection: 'desc',
-          vulnTool: 'sumip'
-        },
-        sourceType: 'cumulative',
-        sortField: 'score',
-        sortDir: 'desc',
-        columns: [],
-        type: 'vuln'
+      rejectUnauthorized: false,
+      headers: {
+        Authorization: `Bearer ${params.apiToken}`
       },
-      rejectUnauthorized: false
-    },
-    // data endpoint
-    active: {
-      method: 'POST',
-      secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/rest/analysis`,
-      json: true,
-      body: {
-        query: {
-          name: '',
-          description: '',
-          context: '',
-          status: -1,
-          createdTime: 0,
-          modifiedTime: 0,
-          groups: [],
-          type: 'vuln',
-          tool: 'vulndetails',
-          sourceType: 'cumulative',
-          startOffset: 0,
-          endOffset: 500,
-          filters: [
-            {
-              id: 'pluginType',
-              filterName: 'pluginType',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: 'active'
-            },
-            {
-              id: 'lastSeen',
-              filterName: 'lastSeen',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
-            },
-            {
-              id: 'severity',
-              filterName: 'severity',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: params.severity || '0,1,2,3,4'
-            }
-          ],
-          vulnTool: 'vulndetails'
-        },
-        sourceType: 'cumulative',
-        columns: [],
-        type: 'vuln'
-      },
-      rejectUnauthorized: false
-    },
-    // data endpoint
-    compliance: {
-      method: 'POST',
-      secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/rest/analysis`,
-      json: true,
-      body: {
-        query: {
-          name: '',
-          description: '',
-          context: '',
-          status: -1,
-          createdTime: 0,
-          modifiedTime: 0,
-          groups: [],
-          type: 'vuln',
-          tool: 'vulndetails',
-          sourceType: 'cumulative',
-          startOffset: 0,
-          endOffset: 500,
-          filters: [
-            {
-              id: 'pluginType',
-              filterName: 'pluginType',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: 'compliance'
-            },
-            {
-              id: 'lastSeen',
-              filterName: 'lastSeen',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
-            },
-            {
-              id: 'severity',
-              filterName: 'severity',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: params.severity || '0,1,2,3,4'
-            }
-          ],
-          vulnTool: 'vulndetails'
-        },
-        sourceType: 'cumulative',
-        columns: [],
-        type: 'vuln'
-      },
-      rejectUnauthorized: false
-    },
-    // data endpoint
-    software: {
-      method: 'POST',
-      secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/rest/analysis`,
-      json: true,
-      body: {
-        query: {
-          context: '',
-          createdTime: 0,
-          description: '',
-          endOffset: 500,
-          filters: [
-            {
-              id: 'lastSeen',
-              filterName: 'lastSeen',
-              operator: '=',
-              type: 'vuln',
-              isPredefined: true,
-              value: `${params.range.split(':')[0]}:${params.range.split(':')[1]}`
-            }
-          ],
-          groups: [],
-          modifiedTime: 0,
-          name: '',
-          sortColumn: 'count',
-          sortDirection: 'desc',
-          sourceType: 'cumulative',
-          startOffset: 0,
-          status: -1,
-          tool: 'listsoftware',
-          type: 'vuln',
-          vulnTool: 'listsoftware'
-        },
-        sortDir: 'desc',
-        sortField: 'count',
-        sourceType: 'cumulative',
-        type: 'vuln',
-        columns: []
-      },
-      rejectUnauthorized: false
+      qs: {
+        page: 1,
+        per_page: 500
+      }
     }
   }
   const selectedOption = Object.assign({}, defaultOptions[key])
@@ -356,94 +159,86 @@ function retryEndpoint (opts, retriesLeft = 10, interval = 2500) {
  */
 function Runner () {
   return {
-    jar: httpRequest.jar(),
-    options: {},
-    pagination: {
-      total: 0,
-      interval: 500
-    },
-    token: null,
-    repos: [],
     /**
      * This sample api controller requires auth to make subsequent requests
      */
     async controller () {
       try {
         this.validateEnv()
-        await this.auth()
-        await this.getRepos()
-        for (let i = 0; i < this.repos.length; i += 1) {
-          await this.prepare(this.repos[i])
+        await this[params.source]()
+      } catch (err) {
+        throw err
+      }
+    },
+    /**
+     * Handler for campaign data
+     */
+    async campaigns () {
+      try {
+        const campaignOptions = initOptions('campaigns')
+        const { body } = await retryEndpoint(campaignOptions)
+        await this.campaignsMap(body)
+        this.write(body)
+        let listLength = body.length
+        if (listLength === campaignOptions.qs.per_page) {
+          while (listLength > 0) {
+            campaignOptions.qs.page += 1
+            const { body } = await retryEndpoint(campaignOptions)
+            await this.campaignsMap(body)
+            this.write(body)
+            listLength = body.length
+          }
         }
       } catch (err) {
         throw err
       }
     },
     /**
-     * Authentication stage of the API calls
+     * Maps campaigns with phishing security test data
+     * @param {Array} campaigns a list of campaigns
      */
-    async auth () {
-      try {
-        this.options = initOptions('auth', { jar: this.jar })
-        const { body } = await retryEndpoint(this.options)
-        this.token = body.response.token
-        this.options = {}
-      } catch (err) {
-        throw err
+    async campaignsMap (campaigns) {
+      for (let i = 0; i < campaigns.length; i += 1) {
+        await this.pstsMap(campaigns[i].psts)
       }
+      return campaigns
     },
-    /**
-     * Initial call for repos list
-     */
-    async getRepos () {
-      try {
-        this.options = initOptions('repos', {
-          jar: this.jar,
-          headers: {
-            'X-SecurityCenter': this.token
+    async pstsMap (psts) {
+      // map each pst
+      for (let i = 0; i < psts.length; i += 1) {
+        const currentPstId = psts[i].pst_id
+        const pstOptions = initOptions('psts')
+        pstOptions.url = pstOptions.url.replace(
+          '{{pst_id}}',
+          currentPstId
+        )
+        const { body } = await retryEndpoint(pstOptions)
+        psts[i] = body
+        // map recipients
+        const recipientOptions = initOptions('recipients')
+        recipientOptions.url = recipientOptions.url.replace(
+          '{{pst_id}}',
+          currentPstId
+        )
+        const recipientData = await retryEndpoint(recipientOptions)
+        let listLength = recipientData.body.length
+        if (listLength === recipientOptions.qs.per_page) {
+          while (listLength > 0) {
+            recipientOptions.qs.page += 1
+            const { body } = await retryEndpoint(recipientOptions)
+            body.forEach(recipient => recipientData.body.push(recipient))
+            listLength = body.length
           }
-        })
-        const { body } = await retryEndpoint(this.options)
-        body.response.repositories.forEach(repo => {
-          this.repos.push(Object.assign({}, repo))
-        })
-        this.options = {}
-      } catch (err) {
-        throw err
-      }
-    },
-    /**
-     * Initial call and pagination variables
-     */
-    async prepare (repositoryObject) {
-      try {
-        this.options = initOptions(params.source, {
-          jar: this.jar,
-          headers: {
-            'X-SecurityCenter': this.token
-          }
-        })
-        const repoName = repositoryObject.name
-        const repoFilterOption = initOptions('repoFilter', { value: [repositoryObject] })
-        this.options.body.query.filters.push(repoFilterOption)
-        const { body } = await retryEndpoint(this.options)
-        this.pagination.total = body.response.totalRecords
-        this.write(body.response.results, repoName)
-        const { interval, total } = this.pagination
-        for (let i = interval; i < total; i += interval) {
-          this.incrementQuery(this.options, interval)
-          const { body } = await retryEndpoint(this.options)
-          this.write(body.response.results, repoName)
         }
-      } catch (err) {
-        throw err
+        psts[i].recipients = recipientData.body
       }
+      return psts
     },
     /**
      * Validates requiredParams object against the process environment variables.
      */
     validateEnv () {
-      Object.keys(requiredParams).map(val => {
+      Object.keys(requiredParams).forEach(val => {
         if (!params[val]) {
           throw new Error(`Required param validation failed. 
         Please check the file against the datafeed config`)
@@ -454,56 +249,10 @@ function Runner () {
      * Writes data depends on params.print
      * @param {Array} list an array of data to write
      */
-    write (list, repoName) {
+    write (list) {
       const responseBuilder = new parser.Builder(initOptions('buildXml'))
       list.forEach(item => {
-        item.repoName = repoName
-        this.dateFilter(item)
-        this.booleanFilter(item)
         outputWriter.writeItem(responseBuilder.buildObject(item))
-      })
-    },
-    /**
-     * Helper func to increment query by the interval value
-     */
-    incrementQuery (opts, interval) {
-      opts.body.query.startOffset += interval
-      opts.body.query.endOffset += interval
-      return opts
-    },
-    dateFilter (val) {
-      const dateProps = [
-        'lastAuthRun',
-        'lastUnauthRun',
-        'firstSeen',
-        'lastSeen',
-        'pluginPubDate',
-        'pluginModDate',
-        'vulnPubDate',
-        'patchPubDate'
-      ]
-      dateProps.map(prop => {
-        const hasProp = Object.prototype.hasOwnProperty.call(val, prop)
-        if (hasProp) {
-          val[prop] = parseInt(val[prop]) < 1
-            ? null
-            : new Date(val[prop] * 1000).toISOString()
-        }
-      })
-    },
-    booleanFilter (val) {
-      const boolProps = [
-        'acceptRisk',
-        'recastRisk',
-        'hasBeenMitigated'
-      ]
-      boolProps.map(prop => {
-        const hasProp = Object.prototype.hasOwnProperty.call(val, prop)
-        if (hasProp) {
-          val[prop] = parseInt(val[prop]) === 0
-            ? 'No'
-            : 'Yes'
-        }
       })
     }
   }
