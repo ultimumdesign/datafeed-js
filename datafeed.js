@@ -61,7 +61,7 @@ function initOptions (key, override = {}) {
       json: true,
       rejectUnauthorized: false,
       headers: {
-        Authorization: `Bearer ${params.apiToken}`
+        Authorization: `Bearer ${params.apiKey}`
       },
       qs: {
         page: 1,
@@ -76,7 +76,7 @@ function initOptions (key, override = {}) {
       json: true,
       rejectUnauthorized: false,
       headers: {
-        Authorization: `Bearer ${params.apiToken}`
+        Authorization: `Bearer ${params.apiKey}`
       }
     },
     // data endpoint
@@ -87,7 +87,7 @@ function initOptions (key, override = {}) {
       json: true,
       rejectUnauthorized: false,
       headers: {
-        Authorization: `Bearer ${params.apiToken}`
+        Authorization: `Bearer ${params.apiKey}`
       },
       qs: {
         page: 1,
@@ -160,12 +160,12 @@ function retryEndpoint (opts, retriesLeft = 10, interval = 2500) {
 function Runner () {
   return {
     /**
-     * This sample api controller requires auth to make subsequent requests
+     * Primary execution controller
      */
     async controller () {
       try {
         this.validateEnv()
-        await this[params.source]()
+        await this.campaigns()
       } catch (err) {
         throw err
       }
@@ -198,41 +198,53 @@ function Runner () {
      * @param {Array} campaigns a list of campaigns
      */
     async campaignsMap (campaigns) {
-      for (let i = 0; i < campaigns.length; i += 1) {
-        await this.pstsMap(campaigns[i].psts)
-      }
-      return campaigns
-    },
-    async pstsMap (psts) {
-      // map each pst
-      for (let i = 0; i < psts.length; i += 1) {
-        const currentPstId = psts[i].pst_id
-        const pstOptions = initOptions('psts')
-        pstOptions.url = pstOptions.url.replace(
-          '{{pst_id}}',
-          currentPstId
-        )
-        const { body } = await retryEndpoint(pstOptions)
-        psts[i] = body
-        // map recipients
-        const recipientOptions = initOptions('recipients')
-        recipientOptions.url = recipientOptions.url.replace(
-          '{{pst_id}}',
-          currentPstId
-        )
-        const recipientData = await retryEndpoint(recipientOptions)
-        let listLength = recipientData.body.length
-        if (listLength === recipientOptions.qs.per_page) {
-          while (listLength > 0) {
-            recipientOptions.qs.page += 1
-            const { body } = await retryEndpoint(recipientOptions)
-            body.forEach(recipient => recipientData.body.push(recipient))
-            listLength = body.length
-          }
+      try {
+        for (let i = 0; i < campaigns.length; i += 1) {
+          await this.pstsMap(campaigns[i].psts)
         }
-        psts[i].recipients = recipientData.body
+        return campaigns
+      } catch (err) {
+        throw err
       }
-      return psts
+    },
+    /**
+     * Maps psts with recipients
+     * @param {*} psts list of pst records
+     */
+    async pstsMap (psts) {
+      try {
+      // map each pst
+        for (let i = 0; i < psts.length; i += 1) {
+          const currentPstId = psts[i].pst_id
+          const pstOptions = initOptions('psts')
+          pstOptions.url = pstOptions.url.replace(
+            '{{pst_id}}',
+            currentPstId
+          )
+          const { body } = await retryEndpoint(pstOptions)
+          psts[i] = body
+          // map recipients
+          const recipientOptions = initOptions('recipients')
+          recipientOptions.url = recipientOptions.url.replace(
+            '{{pst_id}}',
+            currentPstId
+          )
+          const recipientData = await retryEndpoint(recipientOptions)
+          let listLength = recipientData.body.length
+          if (listLength === recipientOptions.qs.per_page) {
+            while (listLength > 0) {
+              recipientOptions.qs.page += 1
+              const { body } = await retryEndpoint(recipientOptions)
+              body.forEach(recipient => recipientData.body.push(recipient))
+              listLength = body.length
+            }
+          }
+          psts[i].recipients = recipientData.body
+        }
+        return psts
+      } catch (err) {
+        throw err
+      }
     },
     /**
      * Validates requiredParams object against the process environment variables.
