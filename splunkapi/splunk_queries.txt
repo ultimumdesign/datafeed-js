@@ -1,0 +1,21 @@
+Account Management Over Time
+
+| `tstats` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=10m | timechart minspan=10m useother=`useother` count by All_Changes.action | `drop_dm_object_name("All_Changes")`
+
+---
+
+Account Lockouts
+
+| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management All_Changes.result="lockout"    by All_Changes.src,All_Changes.Account_Management.src_nt_domain,All_Changes.user | sort 100 - count | `drop_dm_object_name("All_Changes")` |  `drop_dm_object_name("Account_Management")`
+
+---
+
+Account Management by Source user
+
+| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by All_Changes.Account_Management.src_user| `drop_dm_object_name("All_Changes")` | `drop_dm_object_name("Account_Management")` | sort 10 - count
+
+---
+
+Top Account Management Events
+
+| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=1h | `drop_dm_object_name("All_Changes")` | stats sparkline(sum(count),1h) as sparkline,sum(count) as count by action | sort 10 - count

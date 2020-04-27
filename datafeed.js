@@ -9,9 +9,10 @@ const parser = require('xml2js')
 // An object in which the keys describe the required process context parameters for options/execution
 // this is passed into the execution scope from the Archer datafeed config
 const requiredParams = {
-  apiKey: 'username of account',
+  username: 'username of account',
+  password: 'password to splunk',
   baseUrl: 'base url of api',
-  source: 'which options object to make primary API requests to'
+  source: 'which dashboard query'
 }
 
 // CUSTOM PARAMETERS
@@ -54,45 +55,46 @@ function initOptions (key, override = {}) {
       }
     },
     // data endpoint
-    campaigns: {
-      method: 'GET',
+    search: {
+      method: 'POST',
       secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/v1/phishing/campaigns`,
-      json: true,
+      url: `${params.baseUrl}:8089/services/search/jobs/`,
       rejectUnauthorized: false,
-      headers: {
-        Authorization: `Bearer ${params.apiKey}`
+      auth: {
+        username: params.username,
+        password: params.password
       },
-      qs: {
-        page: 1,
-        per_page: 500
+      form: {
+        search: null,
+        earliest: '-7d'
       }
     },
     // data endpoint
-    psts: {
+    results: {
       method: 'GET',
       secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/v1/phishing/security_tests/{{pst_id}}`,
+      url: `${params.baseUrl}:8089/services/search/jobs/{{sid}}/results`,
       json: true,
       rejectUnauthorized: false,
-      headers: {
-        Authorization: `Bearer ${params.apiKey}`
+      auth: {
+        username: params.username,
+        password: params.password
+      },
+      form: {
+        output_mode: 'json'
       }
     },
-    // data endpoint
-    recipients: {
-      method: 'GET',
-      secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}/v1/phishing/security_tests/{{pst_id}}/recipients`,
-      json: true,
-      rejectUnauthorized: false,
-      headers: {
-        Authorization: `Bearer ${params.apiKey}`
-      },
-      qs: {
-        page: 1,
-        per_page: 500
-      }
+    acctMgtOverTime: {
+      query: '| `tstats` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=10m | timechart minspan=10m useother=`useother` count by All_Changes.action | `drop_dm_object_name("All_Changes")`'
+    },
+    acctLockouts: {
+      query: '| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management All_Changes.result="lockout"    by All_Changes.src,All_Changes.Account_Management.src_nt_domain,All_Changes.user | sort 100 - count | `drop_dm_object_name("All_Changes")` |  `drop_dm_object_name("Account_Management")`'
+    },
+    acctMgtByUser: {
+      query: '| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by All_Changes.Account_Management.src_user| `drop_dm_object_name("All_Changes")` | `drop_dm_object_name("Account_Management")` | sort 10 - count'
+    },
+    acctMgtEvents: {
+      query: '| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=1h | `drop_dm_object_name("All_Changes")` | stats sparkline(sum(count),1h) as sparkline,sum(count) as count by action | sort 10 - count'
     }
   }
   const selectedOption = Object.assign({}, defaultOptions[key])
@@ -165,83 +167,42 @@ function Runner () {
     async controller () {
       try {
         this.validateEnv()
-        await this.campaigns()
+        const sid = await this.postSearch()
+        await this.getResults(sid)
       } catch (err) {
         throw err
       }
     },
     /**
-     * Handler for campaign data
+     * Performs search on splunk
+     * @returns {String} SID for search job
      */
-    async campaigns () {
+    async postSearch () {
       try {
-        const campaignOptions = initOptions('campaigns')
-        const { body } = await retryEndpoint(campaignOptions)
-        await this.campaignsMap(body)
-        this.write(body)
-        let listLength = body.length
-        if (listLength === campaignOptions.qs.per_page) {
-          while (listLength > 0) {
-            campaignOptions.qs.page += 1
-            const { body } = await retryEndpoint(campaignOptions)
-            await this.campaignsMap(body)
-            this.write(body)
-            listLength = body.length
-          }
-        }
+        const searchOptions = initOptions('search')
+        const { query } = initOptions(params.source)
+        searchOptions.form.search = query
+        const { body } = await retryEndpoint(searchOptions)
+        let parsed = null
+        parser.parseString(body, function (err, result) {
+          if (err) throw err
+          parsed = result
+        })
+        return parsed.response.sid[0]
       } catch (err) {
         throw err
       }
     },
     /**
-     * Maps campaigns with phishing security test data
-     * @param {Array} campaigns a list of campaigns
+     * Gets a job search results
+     * @param {String} sid SID of search job to get results for
      */
-    async campaignsMap (campaigns) {
+    async getResults (sid) {
       try {
-        for (let i = 0; i < campaigns.length; i += 1) {
-          await this.pstsMap(campaigns[i].psts)
-        }
-        return campaigns
-      } catch (err) {
-        throw err
-      }
-    },
-    /**
-     * Maps psts with recipients
-     * @param {*} psts list of pst records
-     */
-    async pstsMap (psts) {
-      try {
-      // map each pst
-        for (let i = 0; i < psts.length; i += 1) {
-          const currentPstId = psts[i].pst_id
-          const pstOptions = initOptions('psts')
-          pstOptions.url = pstOptions.url.replace(
-            '{{pst_id}}',
-            currentPstId
-          )
-          const { body } = await retryEndpoint(pstOptions)
-          psts[i] = body
-          // map recipients
-          const recipientOptions = initOptions('recipients')
-          recipientOptions.url = recipientOptions.url.replace(
-            '{{pst_id}}',
-            currentPstId
-          )
-          const recipientData = await retryEndpoint(recipientOptions)
-          let listLength = recipientData.body.length
-          if (listLength === recipientOptions.qs.per_page) {
-            while (listLength > 0) {
-              recipientOptions.qs.page += 1
-              const { body } = await retryEndpoint(recipientOptions)
-              body.forEach(recipient => recipientData.body.push(recipient))
-              listLength = body.length
-            }
-          }
-          psts[i].recipients = recipientData.body
-        }
-        return psts
+        const resultsOptions = initOptions('results')
+        resultsOptions.url.replace('{{sid}}', sid)
+        const { body } = await retryEndpoint(resultsOptions)
+        this.write(body.results)
       } catch (err) {
         throw err
       }

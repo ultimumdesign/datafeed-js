@@ -1,0 +1,358 @@
+{
+    "preview": false,
+    "init_offset": 0,
+    "messages": [],
+    "fields": [
+        {
+            "name": "src"
+        },
+        {
+            "name": "src_nt_domain"
+        },
+        {
+            "name": "user"
+        },
+        {
+            "name": "count"
+        }
+    ],
+    "results": [
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "svc-NessusScan",
+            "count": "20"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "p100494",
+            "count": "5"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "Archer.Alert",
+            "count": "3"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100443",
+            "count": "3"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100071",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100073",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100106",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100199",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100286",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100343",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100344",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100384",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100417",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100440",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100486",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np810013",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np810069",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np811002",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np901077",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np909008",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "ps200026",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "psp200009",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "svc-splunk",
+            "count": "2"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100056",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100099",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100114",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100154",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100173",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100239",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100277",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100284",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100291",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100315",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100351",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100404",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100407",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100416",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100460",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100468",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np100476",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np810062",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np901003",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np901009",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np903016",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905036",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905060",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905066",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905069",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905075",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905081",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905083",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905104",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np905126",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np909019",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "np914070",
+            "count": "1"
+        },
+        {
+            "src": "unknown",
+            "src_nt_domain": "NT AUTHORITY\\SYSTEM\nUNK",
+            "user": "psp200003",
+            "count": "1"
+        }
+    ],
+    "highlighted": {}
+}

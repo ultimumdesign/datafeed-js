@@ -1,0 +1,22 @@
+endpoints:
+- endpoint:
+    url: {{baseUrl}}:8089/services/search/jobs/
+    method: POST
+    auth:
+      basic:
+        username:
+        password:
+    body:
+      search: 'query'
+      earliest: '-7d'
+    returns: results.xml
+- endpoint:
+    url: {{baseUrl}}:8089/services/search/jobs/{{sid}}/results
+    method: GET
+    auth:
+      basic:
+        username:
+        password:
+    body:
+      output_mode: 'json'
+    returns: results.json
