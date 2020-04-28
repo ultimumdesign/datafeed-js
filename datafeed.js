@@ -22,6 +22,7 @@ const requiredParams = {
 // --    Special Chars:  params["parameterName"]   Example: params["u$ername"] or params["pa$$word"]
 // eslint-disable-next-line no-undef
 const params = context.CustomParameters
+const auth = Buffer.from(`${params.username}:${params.password}`).toString('base64')
 
 // OUTPUT WRITER
 // Archer added a convenience function attached to the context global that enables looping
@@ -29,6 +30,7 @@ const params = context.CustomParameters
 // a method .writeItem(item)
 // eslint-disable-next-line no-undef
 const outputWriter = context.OutputWriter.create('XML', { RootNode: 'DATA' })
+const waitFor = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 // DATA FEED TOKENS
 // --This object contains the data feed tokens set by the system. Examples: LastRunTime, LastFileProcessed, PreviousRunContext, etc..
@@ -60,9 +62,8 @@ function initOptions (key, override = {}) {
       secureProtocol: 'TLSv1_2_method',
       url: `${params.baseUrl}:8089/services/search/jobs/`,
       rejectUnauthorized: false,
-      auth: {
-        username: params.username,
-        password: params.password
+      headers: {
+        Authorization: `Basic ${auth}`
       },
       form: {
         search: null,
@@ -76,9 +77,8 @@ function initOptions (key, override = {}) {
       url: `${params.baseUrl}:8089/services/search/jobs/{{sid}}/results`,
       json: true,
       rejectUnauthorized: false,
-      auth: {
-        username: params.username,
-        password: params.password
+      headers: {
+        Authorization: `Basic ${auth}`
       },
       form: {
         output_mode: 'json'
@@ -200,7 +200,8 @@ function Runner () {
     async getResults (sid) {
       try {
         const resultsOptions = initOptions('results')
-        resultsOptions.url.replace('{{sid}}', sid)
+        resultsOptions.url = resultsOptions.url.replace('{{sid}}', sid)
+        await waitFor(15000)
         const { body } = await retryEndpoint(resultsOptions)
         this.write(body.results)
       } catch (err) {
