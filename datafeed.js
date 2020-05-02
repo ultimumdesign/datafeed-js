@@ -84,6 +84,20 @@ function initOptions (key, override = {}) {
         output_mode: 'json'
       }
     },
+    // data endpoint
+    status: {
+      method: 'GET',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}:8089/services/search/jobs/{{sid}}`,
+      json: true,
+      rejectUnauthorized: false,
+      headers: {
+        Authorization: `Basic ${auth}`
+      },
+      form: {
+        output_mode: 'json'
+      }
+    },
     acctMgtOverTime: {
       query: '| `tstats` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=10m | timechart minspan=10m useother=`useother` count by All_Changes.action | `drop_dm_object_name("All_Changes")`'
     },
@@ -261,6 +275,7 @@ function Runner () {
       try {
         this.validateEnv()
         const sid = await this.postSearch()
+        await this.getStatus(sid)
         await this.getResults(sid)
       } catch (err) {
         throw err
@@ -294,9 +309,27 @@ function Runner () {
       try {
         const resultsOptions = initOptions('results')
         resultsOptions.url = resultsOptions.url.replace('{{sid}}', sid)
-        await waitFor(5000)
         const { body } = await retryEndpoint(resultsOptions)
         this.write(body.results)
+      } catch (err) {
+        throw err
+      }
+    },
+    /**
+     * Gets a job search status
+     * @param {String} sid SID of search job to get status for
+     */
+    async getStatus (sid) {
+      try {
+        const statusOptions = initOptions('status')
+        statusOptions.url = statusOptions.url.replace('{{sid}}', sid)
+        let done = false
+        while (done === false) {
+          await waitFor(1500)
+          const { body } = await retryEndpoint(statusOptions)
+          if (body.entry.content.isDone === true) done = true
+        }
+        return done
       } catch (err) {
         throw err
       }
