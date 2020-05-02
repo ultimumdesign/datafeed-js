@@ -1,0 +1,228 @@
+{
+    "links": {},
+    "origin": "https://n3b-es01:8089/services/search/jobs",
+    "updated": "2020-05-02T01:44:04-06:00",
+    "generator": {
+        "build": "6db836e2fb9e",
+        "version": "8.0.1"
+    },
+    "entry": [
+        {
+            "name": "| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management All_Changes.result=\"lockout\"    by All_Changes.src,All_Changes.Account_Management.src_nt_domain,All_Changes.user | sort 100 - count | `drop_dm_object_name(\"All_Changes\")` |  `drop_dm_object_name(\"Account_Management\")`",
+            "id": "https://n3b-es01:8089/services/search/jobs/1588405420.176782",
+            "updated": "2020-05-02T01:44:04.236-06:00",
+            "links": {
+                "alternate": "/services/search/jobs/1588405420.176782",
+                "search.log": "/services/search/jobs/1588405420.176782/search.log",
+                "search_telemetry.json": "/services/search/jobs/1588405420.176782/search_telemetry.json",
+                "events": "/services/search/jobs/1588405420.176782/events",
+                "results": "/services/search/jobs/1588405420.176782/results",
+                "results_preview": "/services/search/jobs/1588405420.176782/results_preview",
+                "timeline": "/services/search/jobs/1588405420.176782/timeline",
+                "summary": "/services/search/jobs/1588405420.176782/summary",
+                "control": "/services/search/jobs/1588405420.176782/control"
+            },
+            "published": "2020-05-02T01:43:40.000-06:00",
+            "author": "archer",
+            "content": {
+                "bundleVersion": "5534833144982516568",
+                "canSummarize": false,
+                "cursorTime": "1969-12-31T17:00:00.000-07:00",
+                "defaultSaveTTL": "604800",
+                "defaultTTL": "600",
+                "delegate": "",
+                "diskUsage": 159744,
+                "dispatchState": "DONE",
+                "doneProgress": 1,
+                "dropCount": 0,
+                "earliestTime": "1969-12-31T17:00:00.000-07:00",
+                "eventAvailableCount": 0,
+                "eventCount": 121,
+                "eventFieldCount": 0,
+                "eventIsStreaming": false,
+                "eventIsTruncated": false,
+                "eventSearch": "",
+                "eventSorting": "none",
+                "isBatchModeSearch": true,
+                "isDone": true,
+                "isEventsPreviewEnabled": false,
+                "isFailed": false,
+                "isFinalized": false,
+                "isPaused": false,
+                "isPreviewEnabled": false,
+                "isRealTimeSearch": false,
+                "isRemoteTimeline": false,
+                "isSaved": false,
+                "isSavedSearch": false,
+                "isTimeCursored": false,
+                "isZombie": false,
+                "keywords": "",
+                "label": "",
+                "normalizedSearch": "tstats prestats=t local=f summariesonly=t allow_old_summaries=t chunk_size=10000000 count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management All_Changes.result=\"lockout\" groupby All_Changes.src All_Changes.Account_Management.src_nt_domain All_Changes.user",
+                "numPreviews": 0,
+                "optimizedSearch": " | tstats summariesonly=true allow_old_summaries=true count FROM datamodel=Change WHERE (nodename=All_Changes.Account_Management \"All_Changes.result\"=\"lockout\") BY \"All_Changes.src\", \"All_Changes.Account_Management.src_nt_domain\", \"All_Changes.user\" | sort 100 - count | rename \"All_Changes.*\" as \"*\" | rename \"Account_Management.*\" as \"*\"",
+                "phase0": "tstats  prestats=t local=f summariesonly=t allow_old_summaries=t chunk_size=10000000 count from datamodel=Change where (nodename=All_Changes.Account_Management \"All_Changes.result\"=\"lockout\") groupby \"All_Changes.src\" \"All_Changes.Account_Management.src_nt_domain\" \"All_Changes.user\"",
+                "phase1": "tstats  summariesonly=true allow_old_summaries=true count FROM datamodel=Change WHERE (nodename=All_Changes.Account_Management \"All_Changes.result\"=\"lockout\") BY \"All_Changes.src\", \"All_Changes.Account_Management.src_nt_domain\", \"All_Changes.user\"  | presort  100 -auto(count) | sort  100 - count  | rename  \"All_Changes.*\" as \"*\"  | rename  \"Account_Management.*\" as \"*\" | noop ",
+                "pid": "5289",
+                "priority": 5,
+                "provenance": "",
+                "reduceSearch": "sistats count by \"All_Changes.src\" \"All_Changes.Account_Management.src_nt_domain\" \"All_Changes.user\"",
+                "remoteSearch": "tstats  prestats=t local=f summariesonly=t allow_old_summaries=t chunk_size=10000000 count from datamodel=Change where (nodename=All_Changes.Account_Management \"All_Changes.result\"=\"lockout\") groupby \"All_Changes.src\" \"All_Changes.Account_Management.src_nt_domain\" \"All_Changes.user\"",
+                "reportSearch": "tstats  summariesonly=true allow_old_summaries=true count FROM datamodel=Change WHERE (nodename=All_Changes.Account_Management \"All_Changes.result\"=\"lockout\") BY \"All_Changes.src\", \"All_Changes.Account_Management.src_nt_domain\", \"All_Changes.user\" | sort  100 - count | rename  \"All_Changes.*\" as \"*\" | rename  \"Account_Management.*\" as \"*\"",
+                "resultCount": 60,
+                "resultIsStreaming": false,
+                "resultPreviewCount": 60,
+                "runDuration": 2.814,
+                "sampleRatio": "1",
+                "sampleSeed": "0",
+                "scanCount": 121,
+                "search": "| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management All_Changes.result=\"lockout\"    by All_Changes.src,All_Changes.Account_Management.src_nt_domain,All_Changes.user | sort 100 - count | `drop_dm_object_name(\"All_Changes\")` |  `drop_dm_object_name(\"Account_Management\")`",
+                "searchCanBeEventType": false,
+                "searchTotalBucketsCount": 653,
+                "searchTotalEliminatedBucketsCount": 0,
+                "sid": "1588405420.176782",
+                "statusBuckets": 0,
+                "ttl": 600,
+                "performance": {
+                    "command.noop": {
+                        "invocations": 1,
+                        "input_count": 60,
+                        "output_count": 60
+                    },
+                    "command.presort": {
+                        "invocations": 1,
+                        "input_count": 60,
+                        "output_count": 60
+                    },
+                    "command.rename": {
+                        "invocations": 2,
+                        "input_count": 120,
+                        "output_count": 120
+                    },
+                    "command.sort": {
+                        "invocations": 1,
+                        "input_count": 60,
+                        "output_count": 60
+                    },
+                    "command.tstats": {
+                        "duration_secs": 1.333,
+                        "invocations": 2614,
+                        "input_count": 101,
+                        "output_count": 161
+                    },
+                    "command.tstats.execute_input": {
+                        "duration_secs": 0.002,
+                        "invocations": 1308,
+                        "input_count": 101,
+                        "output_count": 0
+                    },
+                    "command.tstats.execute_output": {
+                        "invocations": 1,
+                        "input_count": 0,
+                        "output_count": 60
+                    },
+                    "command.tstats.query_tsidx": {
+                        "duration_secs": 0.423,
+                        "invocations": 1302
+                    },
+                    "dispatch.createdSearchResultInfrastructure": {
+                        "duration_secs": 0.005,
+                        "invocations": 1
+                    },
+                    "dispatch.evaluate.presort": {
+                        "invocations": 3
+                    },
+                    "dispatch.evaluate.rename": {
+                        "invocations": 6
+                    },
+                    "dispatch.evaluate.sort": {
+                        "invocations": 3
+                    },
+                    "dispatch.evaluate.tstats": {
+                        "duration_secs": 0.009,
+                        "invocations": 3
+                    },
+                    "dispatch.fetch.rcp.phase_0": {
+                        "duration_secs": 1.394,
+                        "invocations": 1308
+                    },
+                    "dispatch.finalWriteToDisk": {
+                        "duration_secs": 0.006,
+                        "invocations": 2
+                    },
+                    "dispatch.localSearch": {
+                        "invocations": 1
+                    },
+                    "dispatch.parserThread": {
+                        "duration_secs": 0.013,
+                        "invocations": 1305
+                    },
+                    "dispatch.stream.local": {
+                        "invocations": 1
+                    },
+                    "dispatch.stream.remote": {
+                        "duration_secs": 1.347,
+                        "invocations": 1304,
+                        "input_count": 0,
+                        "output_count": 8370620
+                    },
+                    "dispatch.stream.remote.n3b-sh01-em-la-doe-gov": {
+                        "duration_secs": 1.347,
+                        "invocations": 1304,
+                        "input_count": 0,
+                        "output_count": 8370620
+                    },
+                    "dispatch.writeStatus": {
+                        "duration_secs": 0.003,
+                        "invocations": 4
+                    },
+                    "startup.configuration": {
+                        "duration_secs": 0.222,
+                        "invocations": 5
+                    },
+                    "startup.handoff": {
+                        "duration_secs": 3.282,
+                        "invocations": 5
+                    }
+                },
+                "messages": [],
+                "request": {
+                    "earliest": "-7d",
+                    "search": "| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management All_Changes.result=\"lockout\"    by All_Changes.src,All_Changes.Account_Management.src_nt_domain,All_Changes.user | sort 100 - count | `drop_dm_object_name(\"All_Changes\")` |  `drop_dm_object_name(\"Account_Management\")`"
+                },
+                "runtime": {
+                    "auto_cancel": "0",
+                    "auto_pause": "0"
+                },
+                "searchProviders": [
+                    "n3b-es01-em-la-doe-gov",
+                    "n3b-sh01-em-la-doe-gov"
+                ],
+                "remoteSearchLogs": [
+                    "n3b-sh01-em-la-doe-gov"
+                ]
+            },
+            "acl": {
+                "perms": {
+                    "read": [
+                        "archer"
+                    ],
+                    "write": [
+                        "archer"
+                    ]
+                },
+                "owner": "archer",
+                "modifiable": true,
+                "sharing": "global",
+                "app": "search",
+                "can_write": true,
+                "ttl": "600"
+            }
+        }
+    ],
+    "paging": {
+        "total": 1,
+        "perPage": 0,
+        "offset": 0
+    }
+}
