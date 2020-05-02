@@ -294,7 +294,7 @@ function Runner () {
       try {
         const resultsOptions = initOptions('results')
         resultsOptions.url = resultsOptions.url.replace('{{sid}}', sid)
-        await waitFor(15000)
+        await waitFor(5000)
         const { body } = await retryEndpoint(resultsOptions)
         this.write(body.results)
       } catch (err) {
