@@ -67,7 +67,7 @@ function initOptions (key, override = {}) {
       },
       form: {
         search: null,
-        earliest: '-7d'
+        earliest: params.earliest || '-7d'
       }
     },
     // data endpoint
@@ -95,6 +95,99 @@ function initOptions (key, override = {}) {
     },
     acctMgtEvents: {
       query: '| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=1h | `drop_dm_object_name("All_Changes")` | stats sparkline(sum(count),1h) as sparkline,sum(count) as count by action | sort 10 - count'
+    },
+    notableIncRespEvents: {
+      query: `index=notable 
+      | stats sparkline as Frequency count by search_name 
+      | sort -count`
+    },
+    uniqueAuth: {
+      query: `index=windows EventCode=4625 OR (EventCode=4624 AND Logon_Type=3) NOT (host=A-Server-1 OR host=A-Server-2 OR host=N3B-DC1-MERRICK OR host=n3b-dc2) user!=*$ user!=-
+      | dedup user
+      |eval EventCode=if(EventCode=4624, "Successful", EventCode)
+      |eval EventCode=if(EventCode=4625, "Failed", EventCode)
+      | timechart count by EventCode
+      `
+    },
+    firewallEventsBlocked: {
+      query: `index=* sourcetype="cisco:sourcefire" OR sourcetype="cisco:asa" AND action=Block* OR vendor_action=Block*
+      | rename vendor_action as action
+      | eval action=if(action="Block,", "Block", action)
+      | eval action=if(action="blocked", "Block", action)
+      | where isnotnull(action)
+      | timechart count by action
+      | appendpipe [stats count | where count=0]`
+    },
+    firewallEventsAllowed: {
+      query: `index=* sourcetype="cisco:sourcefire" OR sourcetype="cisco:asa" AND action=Allow* OR vendor_action=Allow*
+      | rename vendor_action as action
+      | eval action=if(action="Allow,", "Allow", action)
+      | eval action=if(action="allowed", "Allow", action)
+      | where isnotnull(action)
+      | timechart count by action
+      | appendpipe [stats count | where count=0]`
+    },
+    networkOverview: {
+      query: `index=* (sourcetype="cisco:asa" OR sourcetype="cisco:pix" OR sourcetype="cisco:fwsm" OR sourcetype="cisco:sourcefire")  AND (vendor_action=Block* OR vendor_action=Allow* OR action=Allow* OR action=Block* OR action=Redirect OR action=failure)
+      | rename vendor_action as action
+      | eval action=if(action="Allow,", "Allow", action)
+      | eval action=if(action="allowed", "Allow", action)
+      | eval action=if(action="Block,", "Block", action)
+      | eval action=if(action="blocked", "Block", action)
+      | where isnotnull(action)
+      | timechart count by action
+      | appendpipe [stats count | where count=0]`
+    },
+    securityServicesDisabled: {
+      query: `index=windows sourcetype=winhostmon eventtype=securityservices State="Stopped" host=* DisplayName="*" NOT (DisplayName="Windows Defender*" AND host=dt-n3b-fc* OR dest=*IT*
+      OR dest=*cc3d*
+      OR dest=*dev*
+      OR dest=Gold-N3B-FullClone-1803 
+      OR dest=*FA*
+      OR dest=*FT*)
+      |stats values(DisplayName) AS DisplayName first(State) as CurrentState first(_time) as _time by host
+      |mvexpand DisplayName
+      |table _time host DisplayName CurrentState`
+    },
+    topServices: {
+      query: `index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" 
+      | eval port=coalesce(dest_port,src_port)
+      | where isnotnull(port) 
+      | lookup networkservice "Port Number" as port OUTPUT "Service Name" AS service 
+      | eval service=if(isnull(service),"Port:"+tostring(port),service) 
+      | top service`
+    },
+    topSourcesByCountry: {
+      query: `index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" src_ip="*" 
+      |iplocation src_ip
+      |top Country
+      `
+    },
+    topDestination: {
+      query: `index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip="*" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" 
+      | rename dest_ip as clientip 
+      | top clientip  
+      | lookup dnslookup clientip
+      | eval clienthost=if(isnull(clienthost), clientip, clienthost)
+      | eval clienthost=if(clienthost==clientip, "Lookup-NotFound", clienthost)
+      | eval clientip=clientip+": "+clienthost`
+    },
+    topSources: {
+      query: `index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" src_ip=* sourcetype!="cisco:ise:syslog"
+      | rename src_ip as clientip 
+      | top clientip  
+      | lookup dnslookup clientip
+      | eval clienthost=if(isnull(clienthost), clientip, clienthost)
+      | eval clienthost=if(clienthost==clientip, "Lookup-NotFound", clienthost)
+      | eval clientip=clientip+": "+clienthost`
+    },
+    nacAuthFailures: {
+      query: `index=cisco_ise host=n3b-ise-* sourcetype=cisco:ise:syslog action=failure 
+      | stats  count(Calling_Station_ID) as count values(UserName) as UserName values(NetworkDeviceName) as Source values(NAS_Port_Id) as SourcePort values(FailureReason) as Failure values(ISEPolicySetName) as ISE_Policy last(_time) as Time by  Calling_Station_ID
+      | eval Time=strftime(Time, "%H:%M:%S %m-%d-%y") 
+      | table Time Calling_Station_ID UserName Source SourcePort Failure ISE_Policy count
+      | sort -count
+      `
     }
   }
   const selectedOption = Object.assign({}, defaultOptions[key])
