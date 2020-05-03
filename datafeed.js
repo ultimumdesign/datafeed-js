@@ -245,6 +245,7 @@ function requestEndpoint (options, chunked = false) {
  * @param {*} retriesLeft retry max count
  * @param {*} interval retry interval in ms
  */
+/* eslint-disable-next-line no-unused-vars */
 function retryEndpoint (opts, retriesLeft = 10, interval = 2500) {
   return new Promise((resolve, reject) => {
     requestEndpoint(opts)
@@ -290,7 +291,7 @@ function Runner () {
         const searchOptions = initOptions('search')
         const { query } = initOptions(params.source)
         searchOptions.form.search = query
-        const { body } = await retryEndpoint(searchOptions)
+        const { body } = await requestEndpoint(searchOptions)
         let parsed = null
         parser.parseString(body, function (err, result) {
           if (err) throw err
@@ -309,7 +310,7 @@ function Runner () {
       try {
         const resultsOptions = initOptions('results')
         resultsOptions.url = resultsOptions.url.replace('{{sid}}', sid)
-        const { body } = await retryEndpoint(resultsOptions)
+        const { body } = await requestEndpoint(resultsOptions)
         this.write(body.results)
       } catch (err) {
         throw err
@@ -323,11 +324,18 @@ function Runner () {
       try {
         const statusOptions = initOptions('status')
         statusOptions.url = statusOptions.url.replace('{{sid}}', sid)
+        const waitInterval = params.wait || 5000
         let done = false
+        let attemptsRemaining = 5
         while (done === false) {
-          await waitFor(1500)
-          const { body } = await retryEndpoint(statusOptions)
-          if (body.entry.content.isDone === true) done = true
+          try {
+            await waitFor(waitInterval)
+            const { body } = await requestEndpoint(statusOptions)
+            if (body.entry.content.isDone === true) { done = true }
+          } catch (innerError) {
+            attemptsRemaining -= 1
+            if (attemptsRemaining === 0) throw innerError
+          }
         }
         return done
       } catch (err) {
