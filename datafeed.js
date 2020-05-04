@@ -297,6 +297,7 @@ function Runner () {
           if (err) throw err
           parsed = result
         })
+        if (!parsed.response.sid) throw new Error('Unable to parse search response')
         return parsed.response.sid[0]
       } catch (err) {
         throw err
@@ -332,6 +333,8 @@ function Runner () {
             await waitFor(waitInterval)
             const { body } = await requestEndpoint(statusOptions)
             if (body.entry.content.isDone === true) { done = true }
+            attemptsRemaining -= 1
+            if (attemptsRemaining === 0) throw new Error('Unable to get status before limit')
           } catch (innerError) {
             attemptsRemaining -= 1
             if (attemptsRemaining === 0) throw innerError
