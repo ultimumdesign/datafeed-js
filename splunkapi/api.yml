@@ -20,3 +20,14 @@ endpoints:
     body:
       output_mode: 'json'
     returns: results.json
+- endpoint:
+    url: {{baseUrl}}:8089/services/search/jobs/export
+    method: POST
+    auth:
+      basic:
+        username:
+        password:
+    body:
+      output_mode: 'csv'
+      search: 'savedsearch acctMgtOverTime'
+    returns: results.csv
