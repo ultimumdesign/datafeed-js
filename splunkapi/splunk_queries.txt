@@ -1,138 +1,65 @@
 Account Management Over Time
 -7d
 
-| `tstats` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=10m | timechart minspan=10m useother=`useother` count by All_Changes.action | `drop_dm_object_name("All_Changes")`
-
 ---
 
 Account Lockouts
--7d
-
-| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management All_Changes.result="lockout"    by All_Changes.src,All_Changes.Account_Management.src_nt_domain,All_Changes.user | sort 100 - count | `drop_dm_object_name("All_Changes")` |  `drop_dm_object_name("Account_Management")`
+-24h
 
 ---
 
 Account Management by Source user
--7d
-
-| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by All_Changes.Account_Management.src_user| `drop_dm_object_name("All_Changes")` | `drop_dm_object_name("Account_Management")` | sort 10 - count
+-24h
 
 ---
 
 Top Account Management Events
--7d
-
-| tstats `summariesonly` count from datamodel=Change.All_Changes where nodename=All_Changes.Account_Management    by _time,All_Changes.action span=1h | `drop_dm_object_name("All_Changes")` | stats sparkline(sum(count),1h) as sparkline,sum(count) as count by action | sort 10 - count
+-24h
 
 ===
 
 Notable Incident Response Events
--7d
-
-index=notable 
-| stats sparkline as Frequency count by search_name 
-| sort -count
+-24h
 
 ---
 
 Unique Authentications
--24h
-
-index=windows EventCode=4625 OR (EventCode=4624 AND Logon_Type=3) NOT (host=A-Server-1 OR host=A-Server-2 OR host=N3B-DC1-MERRICK OR host=n3b-dc2) user!=*$ user!=-
-| dedup user
-|eval EventCode=if(EventCode=4624, "Successful", EventCode)
-|eval EventCode=if(EventCode=4625, "Failed", EventCode)
-| timechart count by EventCode
+-7d
 
 ---
 
 Firewall Events Blocked
 -24h
 
-index=* sourcetype="cisco:sourcefire" OR sourcetype="cisco:asa" AND action=Block* OR vendor_action=Block*
-| rename vendor_action as action
-| eval action=if(action="Block,", "Block", action)
-| eval action=if(action="blocked", "Block", action)
-| where isnotnull(action)
-| timechart count by action
-| appendpipe [stats count | where count=0]
-
 ---
 
 Firewall Events Allowed
 -24h
-
-index=* sourcetype="cisco:sourcefire" OR sourcetype="cisco:asa" AND action=Allow* OR vendor_action=Allow*
-| rename vendor_action as action
-| eval action=if(action="Allow,", "Allow", action)
-| eval action=if(action="allowed", "Allow", action)
-| where isnotnull(action)
-| timechart count by action
-| appendpipe [stats count | where count=0]
 
 ---
 
 Network Overview
 -60m
 
-index=* (sourcetype="cisco:asa" OR sourcetype="cisco:pix" OR sourcetype="cisco:fwsm" OR sourcetype="cisco:sourcefire")  AND (vendor_action=Block* OR vendor_action=Allow* OR action=Allow* OR action=Block* OR action=Redirect OR action=failure)
-| rename vendor_action as action
-| eval action=if(action="Allow,", "Allow", action)
-| eval action=if(action="allowed", "Allow", action)
-| eval action=if(action="Block,", "Block", action)
-| eval action=if(action="blocked", "Block", action)
-| where isnotnull(action)
-| timechart count by action
-| appendpipe [stats count | where count=0]
-
 ---
 
 Security Services Disabled
 -24h
-
-index=windows sourcetype=winhostmon eventtype=securityservices State="Stopped" host=* DisplayName="*" NOT (DisplayName="Windows Defender*" AND host=dt-n3b-fc* OR dest=*IT*
-OR dest=*cc3d*
-OR dest=*dev*
-OR dest=Gold-N3B-FullClone-1803 
-OR dest=*FA*
-OR dest=*FT*)
-|stats values(DisplayName) AS DisplayName first(State) as CurrentState first(_time) as _time by host
-|mvexpand DisplayName
-|table _time host DisplayName CurrentState
 
 ---
 
 Top Services
 -60m
 
-index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" 
-| eval port=coalesce(dest_port,src_port)
-| where isnotnull(port) 
-| lookup networkservice "Port Number" as port OUTPUT "Service Name" AS service 
-| eval service=if(isnull(service),"Port:"+tostring(port),service) 
-| top service
-
 ---
 
 Top Source by Country
 -60m
 
-index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" src_ip="*" 
-|iplocation src_ip
-|top Country
-
 ---
 
 Top Destination
 -60m
-
-index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip="*" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" 
-| rename dest_ip as clientip 
-| top clientip  
-| lookup dnslookup clientip
-| eval clienthost=if(isnull(clienthost), clientip, clienthost)
-| eval clienthost=if(clienthost==clientip, "Lookup-NotFound", clienthost)
-| eval clientip=clientip+": "+clienthost
 
 
 ---
@@ -140,21 +67,11 @@ index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip="*" dest_ip!="255
 Top Sources
 -60m
 
-index=* sourcetype="cisco:*" OR sourcetype="eStreamer" dest_ip!="255.255.255.255" dest_ip!="0.0.0.0" src_ip=* sourcetype!="cisco:ise:syslog"
-| rename src_ip as clientip 
-| top clientip  
-| lookup dnslookup clientip
-| eval clienthost=if(isnull(clienthost), clientip, clienthost)
-| eval clienthost=if(clienthost==clientip, "Lookup-NotFound", clienthost)
-| eval clientip=clientip+": "+clienthost
-
 ---
 
 NAC Auth Failures
 -60m
 
-index=cisco_ise host=n3b-ise-* sourcetype=cisco:ise:syslog action=failure 
-| stats  count(Calling_Station_ID) as count values(UserName) as UserName values(NetworkDeviceName) as Source values(NAS_Port_Id) as SourcePort values(FailureReason) as Failure values(ISEPolicySetName) as ISE_Policy last(_time) as Time by  Calling_Station_ID
-| eval Time=strftime(Time, "%H:%M:%S %m-%d-%y") 
-| table Time Calling_Station_ID UserName Source SourcePort Failure ISE_Policy count
-| sort -count
+--
+scannerDetected
+-24h
