@@ -57,7 +57,7 @@ function initOptions (key, override = {}) {
       }
     },
     // data endpoint
-    report: {
+    default: {
       method: 'POST',
       secureProtocol: 'TLSv1_2_method',
       url: `${params.baseUrl}:8089/services/search/jobs/export`,
@@ -71,10 +71,10 @@ function initOptions (key, override = {}) {
       }
     },
     // data endpoint
-    n3bSa: {
+    app: {
       method: 'POST',
       secureProtocol: 'TLSv1_2_method',
-      url: `${params.baseUrl}:8089/servicesNS/archer/n3b_SA/search/jobs/export`,
+      url: `${params.baseUrl}:8089/servicesNS/archer/${params.app}/search/jobs/export`,
       rejectUnauthorized: false,
       headers: {
         Authorization: `Basic ${auth}`
@@ -165,7 +165,8 @@ function Runner () {
      */
     async postReport () {
       try {
-        const reportOptions = initOptions(params.end || 'report')
+        const endpoint = params.app ? 'app' : 'default'
+        const reportOptions = initOptions(endpoint)
         const { body } = await retryEndpoint(reportOptions)
         return body
       } catch (err) {
