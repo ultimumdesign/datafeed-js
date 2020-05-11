@@ -31,3 +31,14 @@ endpoints:
       output_mode: 'csv'
       search: 'savedsearch acctMgtOverTime'
     returns: results.csv
+- endpoint:
+    url: {{baseUrl}}:8089/servicesNS/archer/n3b_SA/search/jobs/export
+    method: POST
+    auth:
+      basic:
+        username:
+        password:
+    body:
+      output_mode: 'csv'
+      search: 'savedsearch scannerDetected'
+    returns: results.csv
