@@ -69,6 +69,20 @@ function initOptions (key, override = {}) {
         output_mode: 'csv',
         search: `savedsearch ${params.source}`
       }
+    },
+    // data endpoint
+    n3bSa: {
+      method: 'POST',
+      secureProtocol: 'TLSv1_2_method',
+      url: `${params.baseUrl}:8089/servicesNS/archer/n3b_SA/search/jobs/export`,
+      rejectUnauthorized: false,
+      headers: {
+        Authorization: `Basic ${auth}`
+      },
+      form: {
+        output_mode: 'csv',
+        search: `savedsearch ${params.source}`
+      }
     }
   }
   const selectedOption = Object.assign({}, defaultOptions[key])
@@ -151,7 +165,7 @@ function Runner () {
      */
     async postReport () {
       try {
-        const reportOptions = initOptions('report')
+        const reportOptions = initOptions(params.end || 'report')
         const { body } = await retryEndpoint(reportOptions)
         return body
       } catch (err) {
