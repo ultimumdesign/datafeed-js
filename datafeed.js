@@ -214,7 +214,7 @@ function Runner () {
       try {
         this.options = initOptions('issues')
         const { body } = await requestEndpoint(this.options)
-        const total = params.total || 1000
+        const total = params.total || body.total
         if (body && body.issues) {
           this.mapFields(body.issues)
           this.write(body.issues)
