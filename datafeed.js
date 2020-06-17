@@ -2,7 +2,7 @@
 // APPROVED LIBRARY REFERENCES
 // --All other libraries are blocked during sandboxed code execution.
 // --For more details, visit https://www.npmjs.com/ and search for the library name.
-const httpRequest = require('request')
+const httpRequest = require('request').defaults({ agent: false,  pool: { maxSockets: 150 }, forever: true, timeout: 300000 })
 const parser = require('xml2js')
 
 // REQUIRED PARAMETERS
@@ -11,7 +11,10 @@ const parser = require('xml2js')
 const requiredParams = {
   username: 'username of account',
   password: 'password of login',
-  baseUrl: 'base url of api'
+  baseUrl: 'base url of api',
+  startAt: 'index to start query',
+  maxResults: 'max records to query',
+  fields: 'fields to return'
   // optional param: 'severity' eg: 0,1,2,3,4
 }
 
@@ -22,7 +25,7 @@ const requiredParams = {
 // --    Special Chars:  params["parameterName"]   Example: params["u$ername"] or params["pa$$word"]
 // eslint-disable-next-line no-undef
 const params = context.CustomParameters
-// const auth = Buffer.from(`${params.username}:${params.password}`).toString('base64')
+const auth = Buffer.from(`${params.username}:${params.password}`).toString('base64')
 
 // OUTPUT WRITER
 // Archer added a convenience function attached to the context global that enables looping
@@ -30,6 +33,10 @@ const params = context.CustomParameters
 // a method .writeItem(item)
 // eslint-disable-next-line no-undef
 const outputWriter = context.OutputWriter.create('XML', { RootNode: 'DATA' })
+// const sleep = (milliseconds) => {
+//   return new Promise(resolve => setTimeout(resolve, milliseconds))
+// }
+// const myPool = { maxSockets: 1000 }
 
 // DATA FEED TOKENS
 // --This object contains the data feed tokens set by the system. Examples: LastRunTime, LastFileProcessed, PreviousRunContext, etc..
@@ -71,24 +78,26 @@ function initOptions (key, override = {}) {
       method: 'GET',
       secureProtocol: 'TLSv1_2_method',
       url: `${params.baseUrl}/rest/api/2/search`,
-      headers: {
-        'X-ExperimentalApi': true
-      },
       qs: {
-        maxResults: 25,
-        startAt: 0
+        maxResults: parseInt(params.maxResults),
+        startAt: parseInt(params.startAt),
+        fields: params.fields,
+        jql: 'ORDER BY updated'
       },
       json: true,
+      headers: {
+        Authorization: `Basic ${auth}`
+      },
       rejectUnauthorized: false
     },
     fieldMap: {
       method: 'GET',
       secureProtocol: 'TLSv1_2_method',
       url: `${params.baseUrl}/rest/api/2/field`,
-      headers: {
-        'X-ExperimentalApi': true
-      },
       json: true,
+      headers: {
+        Authorization: `Basic ${auth}`
+      },
       rejectUnauthorized: false
     }
   }
@@ -156,15 +165,16 @@ function requestEndpoint (options, chunked = false) {
  */
 function Runner () {
   return {
-    jar: httpRequest.jar(),
+    // jar: httpRequest.jar(),
     fieldMap: null,
+    options: null,
     /**
      * This sample api controller requires auth to make subsequent requests
      */
     async controller () {
       try {
         this.validateEnv()
-        await this.auth()
+        // await this.auth()
         await this.getFieldMap()
         await this.getIssues()
       } catch (err) {
@@ -187,10 +197,10 @@ function Runner () {
      */
     async getFieldMap () {
       try {
-        const options = initOptions('fieldMap', { jar: this.jar })
+        const options = initOptions('fieldMap')
         const { body } = await requestEndpoint(options)
         this.fieldMap = body.reduce((accumulator, current) => {
-          accumulator[current.id] = current.name
+          accumulator[current.id] = current.name.replace(/[\s\W+]/g, '')
           return accumulator
         }, {})
       } catch (err) {
@@ -202,16 +212,21 @@ function Runner () {
      */
     async getIssues () {
       try {
-        const issuesOptions = initOptions('issues', { jar: this.jar })
-        const { body } = await requestEndpoint(issuesOptions)
-        const total = body.total
-        this.mapFields(body.issues)
-        this.write(body.issues)
-        while (issuesOptions.qs.startAt < total) {
-          issuesOptions.qs.startAt += issuesOptions.qs.maxResults
-          const { body } = await requestEndpoint(issuesOptions)
+        this.options = initOptions('issues')
+        const { body } = await requestEndpoint(this.options)
+        const total = params.total || 1000
+        if (body && body.issues) {
           this.mapFields(body.issues)
-          this.write(body)
+          this.write(body.issues)
+        }
+        while (this.options.qs.startAt < total) {
+          this.options.qs.startAt += this.options.qs.maxResults
+          // await sleep(params.sleep || 250)
+          const { body } = await requestEndpoint(Object.assign({}, this.options))
+          if (body && body.issues) {
+            this.mapFields(body.issues)
+            this.write(body.issues)
+          }
         }
       } catch (err) {
         throw err
@@ -224,11 +239,56 @@ function Runner () {
     mapFields (issuesList) {
       try {
         issuesList.forEach(issue => {
-          Object.keys(issue).forEach(key => {
+          if (issue.fields.assignee && issue.fields.assignee.avatarUrls) {
+            issue.fields.assignee.avatarUrls = null
+          }
+          if (issue.fields.creator && issue.fields.creator.avatarUrls) {
+            issue.fields.creator.avatarUrls = null
+          }
+          if (issue.fields.reporter && issue.fields.reporter.avatarUrls) {
+            issue.fields.reporter.avatarUrls = null
+          }
+          if (issue.fields.project && issue.fields.project.avatarUrls) {
+            issue.fields.project.avatarUrls = null
+          }
+          if (issue.fields.customfield_11018 && issue.fields.customfield_11018.avatarUrls) {
+            issue.fields.customfield_11018.avatarUrls = null
+          }
+          if (issue.fields.customfield_10503 && issue.fields.customfield_10503.avatarUrls) {
+            issue.fields.customfield_10503.avatarUrls = null
+          }
+          if (issue.fields.customfield_10000 && issue.fields.customfield_10000.length) {
+            issue.fields.customfield_10000.forEach(item => {
+              if (item.avatarUrls) item.avatarUrls = null
+            })
+          }
+          if (issue.fields.customfield_11104 && issue.fields.customfield_11104.length) {
+            issue.fields.customfield_11104.forEach(item => {
+              if (item.avatarUrls) item.avatarUrls = null
+            })
+          }
+          if (issue.fields.customfield_10001 
+              && issue.fields.customfield_10001.requestType
+              && issue.fields.customfield_10001.requestType.icon) {
+                issue.fields.customfield_10001.requestType.icon = null
+          }
+          if (issue.fields.customfield_10104 && issue.fields.customfield_10104.length) {
+            issue.fields.customfield_10104.forEach(item => {
+              if (item.avatarUrls) item.avatarUrls = null
+            })
+          }
+          if (issue.fields.customfield_10100 && issue.fields.customfield_10100.length) {
+            issue.fields.customfield_10100.forEach(item => {
+              if (item.approvers && item.approvers.length) {
+                item.approvers.forEach(person => person.approver._links.avatarUrls = null)
+              }
+            })
+          }
+          Object.keys(issue.fields).forEach(key => {
             const keyOnMap = this.fieldMap[key]
             if (keyOnMap) {
-              issue[keyOnMap] = issue[key]
-              delete issue[key]
+              issue.fields[keyOnMap] = issue.fields[key]
+              issue.fields[key] = null
             }
           })
         })
